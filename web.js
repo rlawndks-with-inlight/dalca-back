@@ -82,7 +82,6 @@ const scheduleSystem = () => {
         let use_create_pay = true;
         schedule.scheduleJob('0 0/1 * * * *', async function () {
                 let return_moment = returnMoment()
-                console.log(return_moment)
                 if (use_alarm) {
                         let date = return_moment.substring(0, 10);
                         let dayOfWeek = new Date(date).getDay()
@@ -105,7 +104,7 @@ const scheduleSystem = () => {
                         }
                 }
                 if (use_create_pay) {
-                        if (return_moment.includes('00:00:00')) {//매일 00시
+                        if (return_moment.includes('08::00:')) {
                                 let return_moment_list = return_moment.substring(0, 10).split('-');
                                 let pay_day = parseInt(return_moment_list[2]);
 
@@ -119,7 +118,7 @@ const scheduleSystem = () => {
                                 }
                                 let pay_list = [];
                                 for (var i = 0; i < contracts.length; i++) {
-                                        if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`]) {
+                                        if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`] && contracts[i][`${getEnLevelByNum(0)}_appr`] == 1 && contracts[i][`${getEnLevelByNum(5)}_appr`] == 1) {
                                                 pay_list.push(
                                                         [
                                                                 contracts[i][`${getEnLevelByNum(0)}_pk`],
@@ -137,7 +136,6 @@ const scheduleSystem = () => {
                                 if (pay_list.length > 0) {
                                         let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
                                 }
-
                         }
                 }
         })
@@ -225,9 +223,9 @@ app.get('/api/item', async (req, res) => {
                 if (community_list.includes(table)) {
                         let community_add_view = await insertQuery(`UPDATE ${table}_table SET views=views+1 WHERE pk=?`, [pk]);
                 }
-                if(only_my_item.includes(table)){
+                if (only_my_item.includes(table)) {
                         table = `v_${table}`;
-                }else{
+                } else {
                         table = `${table}_table`;
                 }
                 let item = await dbQueryList(`SELECT * FROM ${table} WHERE pk=${pk}`);
@@ -235,7 +233,7 @@ app.get('/api/item', async (req, res) => {
 
                 if (only_my_item.includes(table)) {
                         if (decode?.user_level < 40) {
-                                if(item[`${getEnLevelByNum(decode?.user_level)}_pk`] != decode?.pk){
+                                if (item[`${getEnLevelByNum(decode?.user_level)}_pk`] != decode?.pk) {
                                         await db.rollback();
                                         return response(req, res, -150, "권한이 없습니다.", []);
                                 }

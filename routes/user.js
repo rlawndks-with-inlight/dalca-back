@@ -288,6 +288,9 @@ const getMyPays = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const onPay = () =>{
+
+}
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays
 };
