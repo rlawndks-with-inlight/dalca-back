@@ -193,6 +193,7 @@ const logRequestResponse = (req, res, decode) => {
     )
 
 }
+
 const tooMuchRequest = (num) => {
     if (num > 1000) {
         return true;
@@ -515,6 +516,7 @@ const initialPay = async (contract) =>{
         }
     }
 }
+
 module.exports = {
     checkLevel, lowLevelException, nullRequestParamsOrBody,
     logRequestResponse, logResponse, logRequest,

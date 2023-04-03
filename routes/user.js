@@ -42,6 +42,16 @@ const kakaoOpt = {
     clientId: '4a8d167fa07331905094e19aafb2dc47',
     redirectUri: 'http://172.30.1.19:8001/api/kakao/callback',
 };
+const PAY_ADDRESS = {
+    TEST: `https://tpayapi.paywelcome.co.kr`,
+    SERVICE: `https://payapi.paywelcome.co.kr`,
+}
+const PAY_INFO = {
+    SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,
+    MID: `wpaybill01`,
+    API_IV: `1111111111111111`,
+    API_KEY: `11111111111111111111111111111111`
+}
 const addContract = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 10)
@@ -93,12 +103,12 @@ const getHomeContent = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 0);
         if (!decode) {
-            return response(req, res, -150, "권한이 없습니다.", [])
+            return response(req, res, -150, "권한이 없f습니다.", [])
         }
         let result_list = [];
-        let user_level_list = [0,5,10];
+        let user_level_list = [0, 5, 10];
         let user_where_sql = "";
-        if(user_level_list.includes(decode?.user_level)){
+        if (user_level_list.includes(decode?.user_level)) {
             user_where_sql = `WHERE ${getEnLevelByNum(decode?.user_level)}_pk=${decode?.pk}`;
         }
         let sql_list = [
@@ -215,8 +225,18 @@ const onChangeCard = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        const { card_number, card_name, card_expire, card_cvc, card_password } = req.body;
-        let result = await insertQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, decode?.pk]);
+
+        const { card_number, card_name, card_expire, card_cvc, card_password, birth } = req.body;
+        if (decode?.name != card_name) {
+            return response(req, res, -100, "카드 소유자명과 회원정보가 일치하지 않습니다.", []);
+        }
+        let create_bill_key = await createBillKey(decode, req.body)
+        if (create_bill_key?.result < 0) {
+            return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
+        }
+        let bill_key = create_bill_key?.data;
+        let result = await insertQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, decode?.pk]);
+
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
@@ -288,9 +308,237 @@ const getMyPays = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const onPay = () =>{
+const onPayByDirect = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0);
+        if (!decode || decode?.user_level != 0) {
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        let user = await dbQueryList(`SELECT * FROM user_table WHERE pk=${decode?.pk}`);
+        user = user?.result[0];
+        if (!user) {
+            return response(req, res, -150, "유저정보 에러 발생.", []);
+        }
+        const { item_pk } = req.body;
+        let pay_item = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${item_pk}`);
+        pay_item = pay_item?.result[0];
+        if (pay_item[`${getEnLevelByNum(0)}_pk`] != decode?.pk || pay_item?.status == -1) {
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        if (pay_item?.status == 1) {
+            return response(req, res, -150, "이미 결제 하였습니다.", []);
+        }
+        let resp = await onPay(user, pay_item);
+        if (resp?.ResultCode == '00') {
+            let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
+            let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
+            let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=? WHERE pk=?`, [
+                trade_date,
+                trade_day,
+                resp?.oid,
+                resp?.tid,
+                resp?.ApplNum,
+                item_pk
+            ])
+            return response(req, res, 100, "success", []);
+        } else {
+            return response(req, res, -100, resp?.ResultMsg, [])
+        }
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const onPayCancelByDirect = async (req, res) => {
+    try {
+        let { item_pk, password } = req.body;
+        const decode = checkLevel(req.cookies.token, 0);
+        if (!decode || decode?.user_level != 0) {
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        let user = await dbQueryList(`SELECT * FROM user_table WHERE pk=${decode?.pk}`);
+        user = user?.result[0];
+        if (!user) {
+            return response(req, res, -150, "유저정보 에러 발생.", []);
+        }
+        password = await makeHash(password);
+        password = password?.data;
+        if (user?.pw != password) {
+            return response(req, res, -150, "비밀번호가 일치하지 않습니다.", []);
+        }
+        let pay_item = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${item_pk}`);
+        pay_item = pay_item?.result[0];
+
+        let payType = 'card';
+        let mid = PAY_INFO.MID;
+        let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
+        let tid = pay_item?.transaction_num;
+        let price = pay_item?.price;
+        let currency = 'WON';
+        let return_moment = returnMoment();
+        return_moment = return_moment.replaceAll('-', '');
+        return_moment = return_moment.replaceAll(':', '');
+        return_moment = return_moment.replaceAll(' ', '');
+        let timestamp = return_moment;
+        let signature = {
+            mid: mid,
+            mkey: mkey,
+            timestamp: return_moment,
+        }
+        signature = new URLSearchParams(signature).toString(); //getQueryByObject(signature);
+        signature = await Buffer.from(crypto.createHash('sha256').update(signature).digest('hex')).toString();
+        let obj = {
+            payType: payType,
+            mid: mid,
+            tid: tid,
+            price: price,
+            currency: currency,
+            timestamp: timestamp,
+            signature: signature,
+        }
+        let query = new URLSearchParams(obj).toString(); //getQueryByObject(obj);
+        let headers = {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        }
+        const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
+        if (resp?.ResultCode == '00') {
+            let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
+            let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
+            let result = await insertQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,[
+                pay_item?.landlord_pk,
+                pay_item?.lessee_pk,
+                pay_item?.realtor_pk,
+                (pay_item?.price)*(-1),
+                pay_item?.pay_category,
+                -1,
+                pay_item?.contract_pk,
+                pay_item?.day,
+                cancel_date,
+                cancel_day,
+                pay_item?.transaction_num
+            ])
+            return response(req, res, 100, "success", []);
+        } else {
+            if(resp?.ResultCode == '01'){
+                return response(req, res, -100, '이미 취소한 거래입니다.', [])
+            }
+            return response(req, res, -100, resp?.ResultMsg, [])
+        }
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const onPay = async (user, pay_item) => {
+    let mid = PAY_INFO.MID;
+    let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
+    let return_moment = returnMoment();
+    return_moment = return_moment.replaceAll('-', '');
+    return_moment = return_moment.replaceAll(':', '');
+    return_moment = return_moment.replaceAll(' ', '');
+    let oid = `${pay_item?.pk}${user?.pk}${return_moment}`;
+    let price = parseInt(pay_item?.price);
+    let buyerName = user?.name;
+    if (user?.name != user?.card_name) {
+        // return response(req, res, -100, "카드 소유자명과 회원정보가 일치하지 않습니다.", []);
+    }
+    let billkey = user?.bill_key;
+    let timestamp = return_moment;
+    let signature = {
+        mid: mid,
+        mkey: mkey,
+        oid: oid,
+        price: price,
+        timestamp: return_moment,
+    }
+    signature = new URLSearchParams(signature).toString(); //getQueryByObject(signature);
+    signature = await Buffer.from(crypto.createHash('sha256').update(signature).digest('hex')).toString();
+    let obj = {
+        mid: mid,
+        oid: oid,
+        price: price,
+        buyerName: buyerName,
+        billkey: billkey,
+        timestamp: timestamp,
+        signature: signature,
+    }
+    let query = new URLSearchParams(obj).toString(); //getQueryByObject(obj);
+    let headers = {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
+    const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/billing/billpay`, query, headers);
+    return { ...resp, oid: oid };
+}
+const onPayCancel = () => {
+
+}
+//빌키생성, 빌키승인(결제), 결제취소, 빌키삭제
+const createBillKey = async (decode, body) => {
+    let mid = PAY_INFO.MID;
+    let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
+    let return_moment = returnMoment();
+    return_moment = return_moment.replaceAll('-', '');
+    return_moment = return_moment.replaceAll(':', '');
+    return_moment = return_moment.replaceAll(' ', '');
+    let signature = {
+        mid: mid,
+        mkey: mkey,
+        cardNumber: body?.card_number.replaceAll(' ', ''),
+        timestamp: return_moment,
+    }
+
+    signature = new URLSearchParams(signature).toString(); //getQueryByObject(signature);
+    signature = await Buffer.from(crypto.createHash('sha256').update(signature).digest('hex')).toString();
+    let obj = {
+        mid: mid,
+        buyerName: body?.card_name,
+        cardNumber: getASE256Encrypt(body?.card_number.replaceAll(' ', '')),
+        cardExpireYY: body?.card_expire.split('/')[1],
+        cardExpireMM: body?.card_expire.split('/')[0],
+        registNo: getASE256Encrypt(body?.birth),
+        passwd: getASE256Encrypt(body?.card_password),
+        timestamp: return_moment,
+        signature: signature,
+    }
+    let query = new URLSearchParams(obj).toString(); //getQueryByObject(obj);
+    let headers = {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
+    const { data: response } = await axios.post(`${PAY_ADDRESS.TEST}/billing/billkey/card`, query, headers);
+    if (response?.ResultCode == '00') {
+        return {
+            result: 100,
+            data: response?.Billkey
+        }
+    } else {
+        return {
+            result: -100,
+            data: {
+                ResultMsg: response?.ResultMsg
+            }
+        }
+    }
+}
+
+const getQueryByObject = (obj) => {
+    let query = "";
+    let keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+        query += `${keys[i]}=${obj[keys[i]]}&`;
+    }
+    query = query.substring(0, query.length - 1);
+    return query;
+}
+var getASE256Encrypt = ((val) => {
+    let cipher = crypto.createCipheriv('aes-256-cbc', PAY_INFO.API_KEY, PAY_INFO.API_IV);
+    let encrypted = cipher.update(val, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+    return encrypted;
+});
+
+const apprBillKey = () => {
 
 }
 module.exports = {
-    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays
+    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect
 };
