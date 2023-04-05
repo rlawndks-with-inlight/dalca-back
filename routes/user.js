@@ -22,6 +22,8 @@ const {
     getDatasWithKeywordAtPage, getDatasAtPage,
     getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, insertQuery, getTableAI
 } = require('../query-util')
+
+const {sendAligoSms} = require('./common')
 const macaddress = require('node-macaddress');
 
 const db = require('../config/db')
@@ -164,8 +166,18 @@ const requestContractAppr = async (req, res) => {
         if (request_level != user?.user_level) {
             return response(req, res, -100, "선택한 유저의 레벨이 잘못되었습니다.", []);
         }
-        let result = await insertQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=${user_pk} WHERE pk=${contract_pk}`);
-        return response(req, res, 100, "success", []);
+        let receiver = [user?.phone, formatPhoneNumber(user?.phone)];
+        let content = `\n${request_level==5?'임대인':'임차인'}동의가 필요합니다.\n 링크: https://dalcapay.com/contract/${contract_pk}\n\n-달카페이-`;
+        await sendAligoSms({ receivers: receiver, message: content }).then(async (result) => {
+            console.log(result)
+            if (result.result_code == '1') {
+                let result = await insertQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=${user_pk} WHERE pk=${contract_pk}`);
+                return response(req, res, 100, "success", []);
+            } else {
+                return response(req, res, -100, "fail", [])
+            }
+        });
+
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
@@ -404,11 +416,11 @@ const onPayCancelByDirect = async (req, res) => {
         if (resp?.ResultCode == '00') {
             let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
             let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
-            let result = await insertQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,[
+            let result = await insertQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
                 pay_item?.landlord_pk,
                 pay_item?.lessee_pk,
                 pay_item?.realtor_pk,
-                (pay_item?.price)*(-1),
+                (pay_item?.price) * (-1),
                 pay_item?.pay_category,
                 -1,
                 pay_item?.contract_pk,
@@ -419,7 +431,7 @@ const onPayCancelByDirect = async (req, res) => {
             ])
             return response(req, res, 100, "success", []);
         } else {
-            if(resp?.ResultCode == '01'){
+            if (resp?.ResultCode == '01') {
                 return response(req, res, -100, '이미 취소한 거래입니다.', [])
             }
             return response(req, res, -100, resp?.ResultMsg, [])

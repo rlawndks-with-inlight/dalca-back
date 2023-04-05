@@ -75,7 +75,7 @@ let checkLevel = (token, level) => {
     }
 }
 const formatPhoneNumber = (input) => {
-    const cleanInput = input.replaceAll(/[^0-9]/g, "");
+    const cleanInput = String(input).replaceAll(/[^0-9]/g, "");
     let result = "";
     const length = cleanInput.length;
     if (length === 8) {
