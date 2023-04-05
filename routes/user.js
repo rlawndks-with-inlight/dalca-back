@@ -364,20 +364,11 @@ const onPayByDirect = async (req, res) => {
 const onPayCancelByDirect = async (req, res) => {
     try {
         let { item_pk, password } = req.body;
-        const decode = checkLevel(req.cookies.token, 0);
-        if (!decode || decode?.user_level != 0) {
+        const decode = checkLevel(req.cookies.token, 40);
+        if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        let user = await dbQueryList(`SELECT * FROM user_table WHERE pk=${decode?.pk}`);
-        user = user?.result[0];
-        if (!user) {
-            return response(req, res, -150, "유저정보 에러 발생.", []);
-        }
-        password = await makeHash(password);
-        password = password?.data;
-        if (user?.pw != password) {
-            return response(req, res, -150, "비밀번호가 일치하지 않습니다.", []);
-        }
+        
         let pay_item = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${item_pk}`);
         pay_item = pay_item?.result[0];
 
