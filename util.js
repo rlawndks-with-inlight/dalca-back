@@ -371,10 +371,10 @@ const getKewordListBySchema = (schema_) => {
         list = ['id', 'name', 'phone', 'id_number'];
     } else if (schema == 'comment') {
         list = ['user_table.id', 'user_table.nickname', 'note', 'item_title'];
-    } else if (schema == 'subscribe') {
-        list = ['u_t.id', 'u_t.nickname', 'u_t.name', 'u_t.phone'];
-    } else if (schema == 'academy_category') {
-        list = ['title', 'user_table.nickname'];
+    } else if (schema == 'contract') {
+        list = ['pk', 'address', 'lessee_id', 'landlord_id', 'realtor_id'];
+    } else if (schema == 'pay') {
+        list = ['contract_pk', 'lessee_id', 'landlord_id', 'realtor_id', 'lessee_name', 'landlord_name', 'realtor_name'];
     } else if (schema == 'academy') {
         list = ['academy_table.title', 'academy_category_table.title'];
     } else if (schema == 'app') {
@@ -382,7 +382,7 @@ const getKewordListBySchema = (schema_) => {
     } else if (schema == 'popup') {
         list = ['link'];
     } else if (schema == 'request') {
-        list = ['user_table.id', 'user_table.nickname', 'title'];
+        list = ['user_table.id', 'user_table.name', 'title'];
     } else if (schema == 'faq') {
         list = ['title'];
     } else if (schema == 'event') {
