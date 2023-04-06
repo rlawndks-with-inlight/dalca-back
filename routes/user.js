@@ -60,6 +60,10 @@ const addContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
+        const is_user = req.body.is_user;
+        if(is_user && decode?.user_level != 10){
+            return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
+        }
         const { pay_type, deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day } = req.body;
         let result = await insertQuery('INSERT INTO contract_table (pay_type, deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [pay_type, deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, decode?.pk, 1]);

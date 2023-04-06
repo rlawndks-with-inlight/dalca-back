@@ -143,8 +143,12 @@ const onSignUp = async (req, res) => {
             broker_classification,
             status_classification,
         } = req.body;
+        let is_manager = false;
         let pw = req.body.pw ?? "";
-
+        const decode = checkLevel(req.cookies.token, 40)
+        if (decode) {
+            is_manager = true;
+        }
         let sql = "SELECT * FROM user_table WHERE id=? ";
 
         let find_user = await dbQueryList(`SELECT * FROM user_table WHERE id=?`, [id]);
@@ -189,11 +193,21 @@ const onSignUp = async (req, res) => {
                 insertValues.push(insert_obj[insertKeys[i]] ?? "");
             }
         }
+        let result_msg = "성공적으로 회원가입 되었습니다.";
+        if(!is_manager){//일반 회원가입
+            if(user_level==10){
+                insertValues.push(0);
+                insertKeys.push('status');
+                result_msg = `승인 후 이용 가능합니다.`;
+            }
+        }else{//관리자가 추가
+            result_msg = '성공적으로 추가 되었습니다.';
+        }
         await db.beginTransaction();
         let result = await insertQuery(`INSERT INTO user_table (${insertKeys.join()}) VALUES (${getQuestions(insertKeys.length).join()})`, insertValues);
         let result2 = await insertQuery("UPDATE user_table SET sort=? WHERE pk=?", [result?.result?.insertId, result?.result?.insertId]);
         await db.commit();
-        return response(req, res, 200, "success", []);
+        return response(req, res, 200, result_msg, []);
 
     } catch (err) {
         console.log(err);
@@ -204,7 +218,7 @@ const onSignUp = async (req, res) => {
 const onLoginById = async (req, res) => {
     try {
         let { id, pw } = req.body;
-        db.query('SELECT * FROM user_table WHERE id=?', [id], async (err, result1) => {
+        db.query('SELECT * FROM user_table WHERE id=? ', [id], async (err, result1) => {
             if (err) {
                 console.log(err)
                 return response(req, res, -200, "서버 에러 발생", [])
@@ -213,10 +227,13 @@ const onLoginById = async (req, res) => {
                     await crypto.pbkdf2(pw, salt, saltRounds, pwBytes, 'sha512', async (err, decoded) => {
                         // bcrypt.hash(pw, salt, async (err, hash) => {
                         let hash = decoded.toString('base64');
-                        console.log(hash)
-                        console.log(result1[0].pw)
+
                         if (hash == result1[0].pw) {
                             try {
+                                if(result1[0].status != 1){
+                                    return response(req, res, -150, "승인 대기 중인 계정입니다.", [])
+                                }
+
                                 const token = jwt.sign({
                                     pk: result1[0].pk ?? 0,
                                     nickname: result1[0].nickname ?? "",
