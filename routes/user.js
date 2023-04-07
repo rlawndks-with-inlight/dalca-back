@@ -23,7 +23,7 @@ const {
     getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, insertQuery, getTableAI
 } = require('../query-util')
 
-const {sendAligoSms} = require('./common')
+const { sendAligoSms } = require('./common')
 const macaddress = require('node-macaddress');
 
 const db = require('../config/db')
@@ -61,7 +61,7 @@ const addContract = async (req, res) => {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
         const is_user = req.body.is_user;
-        if(is_user && decode?.user_level != 10){
+        if (is_user && decode?.user_level != 10) {
             return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
         }
         const { deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day } = req.body;
@@ -87,7 +87,7 @@ const updateContract = async (req, res) => {
         console.log(req.body)
 
         let value_str = "deposit=?, monthly=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=? ";
-        let value_list = [ deposit, monthly, address, address_detail, zip_code, start_date, pay_day];
+        let value_list = [deposit, monthly, address, address_detail, zip_code, start_date, pay_day];
         if (document_src) {
             if (document_src == -1) {
                 value_list.push('')
@@ -171,7 +171,7 @@ const requestContractAppr = async (req, res) => {
             return response(req, res, -100, "선택한 유저의 레벨이 잘못되었습니다.", []);
         }
         let receiver = [user?.phone, formatPhoneNumber(user?.phone)];
-        let content = `\n${request_level==5?'임대인':'임차인'}동의가 필요합니다.\n 링크: https://dalcapay.com/contract/${contract_pk}\n\n-달카페이-`;
+        let content = `\n${request_level == 5 ? '임대인' : '임차인'}동의가 필요합니다.\n 링크: https://dalcapay.com/contract/${contract_pk}\n\n-달카페이-`;
         await sendAligoSms({ receivers: receiver, message: content }).then(async (result) => {
             console.log(result)
             if (result.result_code == '1') {
@@ -242,16 +242,25 @@ const onChangeCard = async (req, res) => {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
 
-        const { card_number, card_name, card_expire, card_cvc, card_password, birth } = req.body;
-        if (decode?.name != card_name) {
+        const { card_number, card_name, card_expire, card_cvc, card_password, birth, user_pk } = req.body;
+        
+        let pk = (decode?.user_level >= 40 && user_pk) ? user_pk : decode?.pk;
+        
+        let user = decode;
+        if(decode?.user_level >= 40 && user_pk){
+            user = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`,[pk]);
+            user = user?.result[0];
+        }
+        if (user?.name != card_name) {
             return response(req, res, -100, "카드 소유자명과 회원정보가 일치하지 않습니다.", []);
         }
-        let create_bill_key = await createBillKey(decode, req.body)
+
+        let create_bill_key = await createBillKey(user, req.body)
         if (create_bill_key?.result < 0) {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
         let bill_key = create_bill_key?.data;
-        let result = await insertQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, decode?.pk]);
+        let result = await insertQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, pk]);
 
         return response(req, res, 100, "success", []);
     } catch (err) {
@@ -372,7 +381,7 @@ const onPayCancelByDirect = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        
+
         let pay_item = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${item_pk}`);
         pay_item = pay_item?.result[0];
 
