@@ -457,13 +457,13 @@ const initialPay = async (contract) =>{
     if(contract['is_confirm']==1){
         return;
     }
-    let result = await insertQuery(`UPDATE contract_table SET is_confirm=1 WHERE pk=?`,[contract[`pk`]]);
     if (
         contract[`${getEnLevelByNum(0)}_appr`] == 1 &&
         contract[`${getEnLevelByNum(5)}_appr`] == 1 &&
         contract[`deposit`] > 0 &&
         contract[`monthly`] > 0
     ) {
+        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1 WHERE pk=?`,[contract[`pk`]]);
         let result2 = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 contract[`${getEnLevelByNum(0)}_pk`],
