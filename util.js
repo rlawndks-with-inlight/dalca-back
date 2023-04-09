@@ -333,9 +333,9 @@ const returnMoment = (d) => {
     let moment = dateString + ' ' + timeString;
     return moment;
 }
-const getQuestions = (length) =>{
+const getQuestions = (length) => {
     let result = [];
-    for(var i = 0;i<length;i++){
+    for (var i = 0; i < length; i++) {
         result.push('?');
     }
     return result;
@@ -391,6 +391,8 @@ const getKewordListBySchema = (schema_) => {
         list = ['title'];
     } else if (schema == 'review') {
         list = ['review_table.title', 'user_table.nickname'];
+    } else if (schema == 'real_estate') {
+        list = ['real_estate_table.name', 'real_estate_table.hash', 'real_estate_table.address', 'real_estate_table.zip_code'];
     } else if (schema == 'alarm') {
         list = [];
     } else {
@@ -453,8 +455,8 @@ const commarNumber = (num) => {
     }
     return result;
 }
-const initialPay = async (contract) =>{
-    if(contract['is_confirm']==1){
+const initialPay = async (contract) => {
+    if (contract['is_confirm'] == 1) {
         return;
     }
     if (
@@ -463,7 +465,7 @@ const initialPay = async (contract) =>{
         contract[`deposit`] > 0 &&
         contract[`monthly`] > 0
     ) {
-        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1 WHERE pk=?`,[contract[`pk`]]);
+        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1 WHERE pk=?`, [contract[`pk`]]);
         let result2 = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 contract[`${getEnLevelByNum(0)}_pk`],

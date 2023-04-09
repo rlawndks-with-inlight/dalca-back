@@ -194,13 +194,13 @@ const onSignUp = async (req, res) => {
             }
         }
         let result_msg = "성공적으로 회원가입 되었습니다.";
-        if(!is_manager){//일반 회원가입
-            if(user_level==10){
+        if (!is_manager) {//일반 회원가입
+            if (user_level == 10) {
                 insertValues.push(0);
                 insertKeys.push('status');
                 result_msg = `승인 후 이용 가능합니다.`;
             }
-        }else{//관리자가 추가
+        } else {//관리자가 추가
             result_msg = '성공적으로 추가 되었습니다.';
         }
         await db.beginTransaction();
@@ -230,7 +230,7 @@ const onLoginById = async (req, res) => {
 
                         if (hash == result1[0].pw) {
                             try {
-                                if(result1[0].status != 1){
+                                if (result1[0].status != 1) {
                                     return response(req, res, -150, "승인 대기 중인 계정입니다.", [])
                                 }
 
@@ -837,11 +837,11 @@ const updateUser = async (req, res) => {
         }
         let keys = Object.keys(body);
         let values = [];
-        for(var i=  0;i<keys.length;i++){
+        for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]])
         }
         values.push(pk);
-        let result = await insertQuery(`UPDATE user_table SET ${keys.join('=?, ')}=? WHERE pk=?`,values);                
+        let result = await insertQuery(`UPDATE user_table SET ${keys.join('=?, ')}=? WHERE pk=?`, values);
         return response(req, res, 100, "success", [])
 
     } catch (err) {
@@ -1053,7 +1053,7 @@ const addItem = async (req, res) => {
         let sql = `INSERT INTO ${table}_table (${keys.join()}) VALUES (${values_str}) `;
         await db.beginTransaction();
         let result = await insertQuery(sql, values);
-        let not_use_sort = ['subscribe'];
+        let not_use_sort = ['subscribe', 'real_estate'];
         if (!not_use_sort.includes(table)) {
             let result2 = await insertQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
         }
@@ -1580,7 +1580,31 @@ const getTableName = (table) => {
 const getItems = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 0);
-        let { level, category_pk, status, user_pk, keyword, limit, page, page_cut, order, table, master_pk, difficulty, academy_category_pk, price_is_minus, start_date, end_date, type, is_my, contract_pk, is_contract, pay_category } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
+        let {
+            level,
+            category_pk,
+            status,
+            user_pk,
+            keyword,
+            limit,
+            page,
+            page_cut,
+            order,
+            table,
+            master_pk,
+            difficulty,
+            academy_category_pk,
+            price_is_minus,
+            start_date,
+            end_date,
+            type,
+            is_my,
+            contract_pk,
+            is_contract,
+            pay_category,
+            lng,
+            lat
+        } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
         let table_name = getTableName(table);
         let sql = `SELECT * FROM ${table_name} `;
         let pageSql = `SELECT COUNT(*) FROM ${table_name} `;
@@ -1670,7 +1694,6 @@ const getItems = async (req, res) => {
                 }
             }
             return response(req, res, 100, "success", { data: result, maxPage: maxPage, option_obj: option_obj });
-
         } else {
             let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body);
             let result = get_result?.result;
@@ -1726,24 +1749,24 @@ const editContract = async (req, res) => {
         let users = await dbQueryList(`SELECT pk, id, user_level FROM user_table`);
         users = users?.result;
         let user_obj = {};
-        for(var i = 0;i<users.length;i++){
+        for (var i = 0; i < users.length; i++) {
             user_obj[users[i]?.id] = users[i];
         }
-        if(!user_obj[realtor_id] || user_obj[realtor_id]?.user_level != 10){
+        if (!user_obj[realtor_id] || user_obj[realtor_id]?.user_level != 10) {
             return response(req, res, -100, "공인중개사 아이디를 찾을 수 없습니다.", [])
-        }else{
+        } else {
             delete body['realtor_id'];
             body['realtor_pk'] = user_obj[realtor_id]?.pk;
         }
-        if(!user_obj[landlord_id] || user_obj[landlord_id]?.user_level != 5){
+        if (!user_obj[landlord_id] || user_obj[landlord_id]?.user_level != 5) {
             return response(req, res, -100, "임대인 아이디를 찾을 수 없습니다.", [])
-        }else{
+        } else {
             delete body['landlord_id'];
             body['landlord_pk'] = user_obj[landlord_id]?.pk;
         }
-        if(!user_obj[lessee_id] || user_obj[lessee_id]?.user_level != 0){
+        if (!user_obj[lessee_id] || user_obj[lessee_id]?.user_level != 0) {
             return response(req, res, -100, "임차인 아이디를 찾을 수 없습니다.", [])
-        }else{
+        } else {
             delete body['lessee_id'];
             body['lessee_pk'] = user_obj[lessee_id]?.pk;
         }
@@ -1751,26 +1774,26 @@ const editContract = async (req, res) => {
         let sql = "";
         let keys = Object.keys(body);
         let values = [];
-        for(var i = 0;i<keys.length;i++){
+        for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]]);
         }
-        if(edit_category=='add'){
+        if (edit_category == 'add') {
             let questions = [];
-            for(var i = 0;i<keys.length;i++){
+            for (var i = 0; i < keys.length; i++) {
                 questions.push('?');
             }
             sql = ` INSERT INTO contract_table (${keys.join()}) VALUES (${questions.join()}) `;
-        }else{
+        } else {
             values.push(req.body.pk);
             sql = ` UPDATE contract_table SET ${keys.join('=?, ')}=? WHERE pk=?`;
         }
         await db.beginTransaction();
-        let result = await insertQuery(sql,values);
-        
-        if(body['landlord_appr']==1 && body['lessee_appr']==1){
-            if(req.body.pk){
+        let result = await insertQuery(sql, values);
+
+        if (body['landlord_appr'] == 1 && body['lessee_appr'] == 1) {
+            if (req.body.pk) {
                 body['pk'] = req.body.pk;
-            }else{
+            } else {
                 body['pk'] = result?.result?.insertId;
             }
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${body['pk']}`);
@@ -1810,7 +1833,7 @@ const editPay = async (req, res) => {
         };
         let { edit_category } = req.params;
         let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${contract_pk}`);
-        if(contract?.result.length == 0){
+        if (contract?.result.length == 0) {
             return response(req, res, -100, "존재하지 않는 계약고유번호 입니다.", [])
         }
         contract = contract?.result[0];
@@ -1821,20 +1844,20 @@ const editPay = async (req, res) => {
         let sql = "";
         let keys = Object.keys(body);
         let values = [];
-        for(var i = 0;i<keys.length;i++){
+        for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]]);
         }
-        if(edit_category=='add'){
+        if (edit_category == 'add') {
             let questions = [];
-            for(var i = 0;i<keys.length;i++){
+            for (var i = 0; i < keys.length; i++) {
                 questions.push('?');
             }
             sql = ` INSERT INTO pay_table (${keys.join()}) VALUES (${questions.join()}) `;
-        }else{
+        } else {
             values.push(req.body.pk);
             sql = ` UPDATE pay_table SET ${keys.join('=?, ')}=? WHERE pk=?`;
         }
-        let result = await insertQuery(sql,values);
+        let result = await insertQuery(sql, values);
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
@@ -1951,6 +1974,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_) => {
             }
             result = result_list;
         }
+
     } else {
         page_result = await dbQueryList(pageSql);
         page_result = page_result?.result;
@@ -2007,11 +2031,61 @@ const getMyItem = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const getAddressByText = async (req, res) => {
+    try {
+        let { text } = req.body;
+        let client_id = 'p8k25t57ye';
+        let client_secret = 'Nuqyt0Sj901zfBXVdFcXFdK6Fhzbsu2JFOVjXkW3';
+        let api_url = 'https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode'; // json
+        if (!text) {
+            return response(req, res, -100, "주소명을 입력 후 검색 버튼을 눌러주세요.", result);
+        }
+        const coord = await axios.get(`${api_url}`, {
+            params: {
+                query: text,
+            },
+            headers: {
+                "X-NCP-APIGW-API-KEY-ID": `${client_id}`,
+                "X-NCP-APIGW-API-KEY": `${client_secret}`,
+            },
+        })
+        if (!coord.data.addresses) {
+            return response(req, res, 100, "success", []);
+        } else {
+            let result = [];
+            for (var i = 0; i < coord.data.addresses.length; i++) {
+                result[i] = {
+                    lng: coord.data.addresses[i].x,
+                    lat: coord.data.addresses[i].y,
+                    road_address: coord.data.addresses[i].roadAddress,
+                    address: coord.data.addresses[i].jibunAddress
+                }
+                for (var j = 0; j < coord.data.addresses[i].addressElements.length; j++) {
+                    if (coord.data.addresses[i].addressElements[j]?.types[0] == 'POSTAL_CODE') {
+                        result[i].zip_code = coord.data.addresses[i].addressElements[j]?.longName;
+                    }
+                    if (coord.data.addresses[i].addressElements[j]?.types[0] == 'LAND_NUMBER') {
+                        result[i].land_number = coord.data.addresses[i].addressElements[j]?.longName;
+                    }
+                }
+            }
+            if (result.length > 0) {
+                return response(req, res, 100, "success", result);
+            } else {
+                return response(req, res, -100, "올바르지 않은 주소입니다. 주소를 다시 입력해 주세요.", result);
+            }
+        }
+    } catch (e) {
+        console.log(e);
+        return response(req, res, -200, "서버 에러 발생", []);
+    }
+}
 function addDays(date, days) {
     const clone = new Date(date);
     clone.setDate(date.getDate() + days)
     return clone;
 }
+
 const onSubscribe = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 0)
@@ -2593,5 +2667,5 @@ module.exports = {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay
+    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
 };

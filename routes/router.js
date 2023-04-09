@@ -6,7 +6,7 @@ const {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, 
+    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
 } = require('./common');
 const {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect
@@ -66,7 +66,7 @@ router.get('/getheadercontent', getHeaderContent);
 router.get('/getmyinfo', getMyInfo);
 router.get('/customer-info', getCustomInfo);
 router.post('/change-card', onChangeCard);
-
+router.post('/getaddressbytext', getAddressByText);
 router.post('/keyrecieve/:pk/:device', onKeyrecieve);
 router.get('/keyrecieve/:pk/:device', onKeyrecieve);
 

@@ -1,6 +1,6 @@
 const { commarNumber, getEnLevelByNum } = require("../util");
 
-const listFormatBySchema = (schema, data_) => {
+const listFormatBySchema = (schema, data_, body_) => {
 
     let data = [...data_];
 
@@ -36,6 +36,7 @@ const listFormatBySchema = (schema, data_) => {
             data[i]['period'] = `${data[i]?.start_date} ~ ${data[i]?.end_date}`
         }
     }
+    if(schema)
     return data;
 }
 const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
