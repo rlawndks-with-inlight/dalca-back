@@ -306,7 +306,7 @@ function response(req, res, code, message, data) {
         'data': data,
     }
     const decode = checkLevel(req.cookies.token, 0)
-    if (code < 0 || req.originalUrl.includes('login') || req.originalUrl.includes('delete') || req.originalUrl.includes('insertpayresult') || concentration_user_list.includes(decode?.pk)) {
+    if (true || req.originalUrl.includes('login') || req.originalUrl.includes('delete') || req.originalUrl.includes('insertpayresult') || concentration_user_list.includes(decode?.pk)) {
         logRequestResponse(req, resDict, decode);
     }
     res.send(resDict);
