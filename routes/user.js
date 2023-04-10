@@ -243,12 +243,12 @@ const onChangeCard = async (req, res) => {
         }
 
         const { card_number, card_name, card_expire, card_cvc, card_password, birth, user_pk } = req.body;
-        
+
         let pk = (decode?.user_level >= 40 && user_pk) ? user_pk : decode?.pk;
-        
+
         let user = decode;
-        if(decode?.user_level >= 40 && user_pk){
-            user = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`,[pk]);
+        if (decode?.user_level >= 40 && user_pk) {
+            user = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`, [pk]);
             user = user?.result[0];
         }
         if (user?.name != card_name) {
@@ -369,6 +369,41 @@ const onPayByDirect = async (req, res) => {
         } else {
             return response(req, res, -100, resp?.ResultMsg, [])
         }
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const onPayResult = async (req, res) => {
+    try {
+        let {
+            tid,
+            resultCode,
+            resultMsg,
+            EventCode,
+            TotPrice,
+            MOID,
+            payMethod,
+            applNum,
+            applDate,
+            applTime,
+            buyerEmail,
+            buyerTel,
+            buyerName,
+            temp,
+        } = req.body;
+        let pay_pk = temp;
+        let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applDate.substring(8, 10)}:${applDate.substring(10, 12)}:${applDate.substring(12, 14)}`;
+        let trade_day = trade_date.substring(0, 10);
+        let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?`, [
+            trade_date,
+            trade_day,
+            MOID,
+            tid,
+            applNum,
+            pay_pk
+        ])
+        return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
@@ -555,6 +590,7 @@ var getASE256Encrypt = ((val) => {
 const apprBillKey = () => {
 
 }
+
 module.exports = {
-    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect
+    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult
 };
