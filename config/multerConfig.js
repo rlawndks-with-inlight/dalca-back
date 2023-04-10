@@ -18,10 +18,22 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
         let typeArray = file.mimetype.split('/')
         let filetype = typeArray[1]
-        if (filetype == 'jpg' || filetype == 'png' || filetype == 'gif' || filetype == 'jpeg' || filetype == 'bmp' || filetype == 'mp4' || filetype == 'avi' || filetype == 'webp' || filetype == 'ico')
+        if (
+                filetype == 'jpg' ||
+                filetype == 'png' ||
+                filetype == 'gif' ||
+                filetype == 'jpeg' ||
+                filetype == 'bmp' ||
+                filetype == 'mp4' ||
+                filetype == 'avi' ||
+                filetype == 'webp' ||
+                filetype == 'ico' ||
+                filetype == 'pdf' ||
+                filetype == 'haansoftpdf'
+        )
                 return cb(null, true)
 
-        console.log((file.fieldname === 'image') ? '광고 ' : '상품 ' + '파일 확장자 제한: ', filetype)
+        console.log('확장자 제한: ', filetype)
         req.fileValidationError = "파일 형식이 올바르지 않습니다(.jpg, .png, .gif 만 가능)"
         cb(null, false, new Error("파일 형식이 올바르지 않습니다(.jpg, .png, .gif 만 가능)"))
 }

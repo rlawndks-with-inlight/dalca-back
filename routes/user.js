@@ -64,9 +64,9 @@ const addContract = async (req, res) => {
         if (is_user && decode?.user_level != 10) {
             return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
         }
-        const { deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day } = req.body;
-        let result = await insertQuery('INSERT INTO contract_table ( deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, decode?.pk, 1]);
+        const { deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
+        let result = await insertQuery('INSERT INTO contract_table ( deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
         return response(req, res, 100, "success", {
             result_pk: result?.result?.insertId
         });
@@ -83,11 +83,11 @@ const updateContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { deposit, monthly, address, address_detail, zip_code, start_date, pay_day, pk, document_src } = req.body;
+        const { deposit, monthly, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
         console.log(req.body)
 
-        let value_str = "deposit=?, monthly=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=? ";
-        let value_list = [deposit, monthly, address, address_detail, zip_code, start_date, pay_day];
+        let value_str = "deposit=?, monthly=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
+        let value_list = [deposit, monthly, address, address_detail, zip_code, start_date, pay_day, pdf_list];
         if (document_src) {
             if (document_src == -1) {
                 value_list.push('')

@@ -230,7 +230,6 @@ app.get('/api/item', async (req, res) => {
                 }
                 let item = await dbQueryList(`SELECT * FROM ${table} WHERE pk=${pk}`);
                 item = item?.result[0];
-
                 if (only_my_item.includes(table)) {
                         if (decode?.user_level < 40) {
                                 if (item[`${getEnLevelByNum(decode?.user_level)}_pk`] != decode?.pk) {
