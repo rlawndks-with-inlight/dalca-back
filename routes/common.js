@@ -136,13 +136,16 @@ const onSignUp = async (req, res) => {
             user_level,
             type,
             profile_img,
-            company_number,
             office_name,
-            office_number,
-            office_classification,
-            broker_classification,
-            status_classification,
+            company_number,
+            office_address,
+            office_phone,
+            company_number_src,
+            office_src,
+            bank_book_src,
+            id_number_src,
         } = req.body;
+        console.log(req.body)
         let is_manager = false;
         let pw = req.body.pw ?? "";
         const decode = checkLevel(req.cookies.token, 40)
@@ -168,7 +171,6 @@ const onSignUp = async (req, res) => {
             pw,
             name,
             id_number,
-            nickname,
             phone,
             address,
             address_detail,
@@ -176,12 +178,14 @@ const onSignUp = async (req, res) => {
             user_level,
             type,
             profile_img,
-            company_number,
             office_name,
-            office_number,
-            office_classification,
-            broker_classification,
-            status_classification,
+            company_number,
+            office_address,
+            office_phone,
+            company_number_src,
+            office_src,
+            bank_book_src,
+            id_number_src,
         }
         let type_number = ['user_level', 'type']
         let insertKeys = Object.keys(insert_obj);
@@ -807,12 +811,16 @@ const updateUser = async (req, res) => {
         const user_level = req.body.user_level ?? 0;
         const address_detail = req.body.address_detail ?? "";
         const zip_code = req.body.zip_code ?? "";
-        const company_number = req.body.company_number ?? "";
+
         const office_name = req.body.office_name ?? "";
-        const office_number = req.body.office_number ?? "";
-        const office_classification = req.body.office_classification ?? "";
-        const broker_classification = req.body.broker_classification ?? "";
-        const status_classification = req.body.status_classification ?? "";
+        const company_number = req.body.company_number ?? "";
+        const office_address = req.body.office_address ?? "";
+        const office_phone = req.body.office_phone ?? "";
+        const company_number_src = req.body.company_number_src ?? "";
+        const office_src = req.body.office_src ?? "";
+        const bank_book_src = req.body.bank_book_src ?? "";
+        const id_number_src = req.body.id_number_src ?? "";
+
         const pk = req.body.pk ?? 0;
         let body = {
             id,
@@ -823,12 +831,14 @@ const updateUser = async (req, res) => {
             user_level,
             address_detail,
             zip_code,
-            company_number,
             office_name,
-            office_number,
-            office_classification,
-            broker_classification,
-            status_classification,
+            company_number,
+            office_address,
+            office_phone,
+            company_number_src,
+            office_src,
+            bank_book_src,
+            id_number_src,
         }
         if (pw) {
             pw = await makeHash(pw);

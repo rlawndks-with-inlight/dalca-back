@@ -18,7 +18,8 @@ const jwt = require('jsonwebtoken')
 const { checkLevel, logRequestResponse, isNotNullOrUndefined,
         namingImagesPath, nullResponse, lowLevelResponse, response,
         returnMoment, sendAlarm, categoryToNumber, tooMuchRequest,
-        getEnLevelByNum } = require('./util')
+        getEnLevelByNum,
+        formatPhoneNumber } = require('./util')
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
 //multer
@@ -34,7 +35,7 @@ const schedule = require('node-schedule');
 
 const path = require('path');
 const { insertQuery } = require('./query-util')
-const { getItem } = require('./routes/common')
+const { getItem, sendAligoSms } = require('./routes/common')
 app.set('/routes', __dirname + '/routes');
 app.use('/config', express.static(__dirname + '/config'));
 //app.use('/image', express.static('./upload'));
@@ -103,8 +104,8 @@ const scheduleSystem = () => {
                                 }
                         }
                 }
-                if (use_create_pay) {
-                        if (return_moment.includes('08::00:')) {
+                if (return_moment.includes('08:00:')) {
+                        if (use_create_pay) {
                                 let return_moment_list = return_moment.substring(0, 10).split('-');
                                 let pay_day = parseInt(return_moment_list[2]);
 
@@ -112,12 +113,49 @@ const scheduleSystem = () => {
                                 contracts = contracts?.result;
                                 let pays = await dbQueryList(`SELECT contract_pk, MAX(day) as max_day FROM v_pay WHERE pay_category=0 group by contract_pk`);
                                 pays = pays?.result;
+                                let users = await dbQueryList(`SELECT * FROM user_table`);
+                                users = users?.result;
+                                users_obj = {};
+                                for (var i = 0; i < users.length; i++) {
+                                        users_obj[users[i]?.pk] = users[i];
+                                }
+
+                                let send_message_list = [];
+
                                 let pay_obj = {};
                                 for (var i = 0; i < pays.length; i++) {
                                         pay_obj[`${pays[i]?.contract_pk}-${pays[i]?.max_day}`] = true;
                                 }
+
                                 let pay_list = [];
+                                console.log(contracts.length)
                                 for (var i = 0; i < contracts.length; i++) {
+                                        let end_date = contracts[i]?.end_date;
+                                        let distance_day = differenceTwoDate(end_date, return_moment.substring(0, 10));
+                                        console.log(distance_day)
+                                        console.log(contracts[i])
+                                        console.log(return_moment.substring(0, 10))
+                                        if (distance_day == 60) {
+                                                if (users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]) {
+                                                        send_message_list.push({//임대인 푸시
+                                                                phone: [users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone)],
+                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                        })
+                                                }
+                                                if (users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]) {
+                                                        send_message_list.push({//임대인 푸시
+                                                                phone: [users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone)],
+                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                        })
+                                                }
+                                                if (users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]) {
+                                                        send_message_list.push({//임대인 푸시
+                                                                phone: [users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone)],
+                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                        })
+                                                }
+                                        }
+
                                         if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`] && contracts[i][`${getEnLevelByNum(0)}_appr`] == 1 && contracts[i][`${getEnLevelByNum(5)}_appr`] == 1) {
                                                 pay_list.push(
                                                         [
@@ -133,22 +171,32 @@ const scheduleSystem = () => {
                                                 )
                                         }
                                 }
+                                for (var i = 0; i < send_message_list.length; i++) {
+                                        let result = await sendAligoSms({ receivers: send_message_list[i].phone, message: send_message_list[i].message })
+                                }
                                 if (pay_list.length > 0) {
                                         let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
                                 }
                         }
                 }
+
         })
 
 }
-
+const differenceTwoDate = (f_d_, s_d_) => {//두날짜의 시간차
+        let f_d = new Date(f_d_).getTime();//큰시간
+        let s_d = new Date(s_d_).getTime();//작은시간
+        let hour = (f_d - s_d) / (1000 * 3600);
+        let minute = (f_d - s_d) / (1000 * 60);
+        let day = (f_d - s_d) / (1000 * 3600 * 24);
+        return day;
+}
 let server = undefined
 if (is_test) {
         server = http.createServer(app).listen(HTTP_PORT, function () {
                 console.log("Server on " + HTTP_PORT)
                 scheduleSystem();
         });
-
 } else {
         const options = { // letsencrypt로 받은 인증서 경로를 입력해 줍니다.
                 ca: fs.readFileSync("/etc/letsencrypt/live/dalcapay.com/fullchain.pem"),
@@ -158,38 +206,11 @@ if (is_test) {
         server = https.createServer(options, app).listen(HTTPS_PORT, function () {
                 console.log("Server on " + HTTPS_PORT);
                 scheduleSystem();
-        });
 
-}
-server.on('connection', function (socket) {
-        // Increase connections count on newly estabilished connection
-        app.connectionsN++;
-
-        socket.on('close', function () {
-                // Decrease connections count on closing the connection
-                app.connectionsN--;
         });
-});
-const resizeFile = async (path, filename) => {
-        try {
-                // await sharp(path + '/' + filename)
-                //         .resize(64, 64)
-                //         .jpeg({quality:100})
-                //         .toFile(path + '/' + filename.substring(3, filename.length))
-                //        await fs.unlink(path + '/' + filename, (err) => {  // 원본파일 삭제 
-                //                 if (err) {
-                //                     console.log(err)
-                //                     return
-                //                 }
-                //             })
-                fs.rename(path + '/' + filename, path + '/' + filename.replaceAll('!@#', ''), function (err) {
-                        if (err) throw err;
-                        console.log('File Renamed!');
-                });
-        } catch (err) {
-                console.log(err)
-        }
 }
+
+
 // fs.readdir('./image/profile', async (err, filelist) => {
 //         if (err) {
 //                 console.log(err);
@@ -249,3 +270,6 @@ app.get('/api/item', async (req, res) => {
 app.get('/', (req, res) => {
         res.json({ message: `Server is running on port ${req.secure ? HTTPS_PORT : HTTP_PORT}` });
 });
+module.exports = {
+        is_test
+}
