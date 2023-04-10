@@ -404,7 +404,6 @@ const onPayResult = async (req, res) => {
                 applNum,
                 pay_pk
             ])
-            console.log(update_pay)
             console.log({
                 trade_date,
                 trade_day,
