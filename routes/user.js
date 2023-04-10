@@ -392,27 +392,31 @@ const onPayResult = async (req, res) => {
             buyerName,
             temp,
         } = req.body;
-        console.log(req.body)
-        let pay_pk = temp;
-        let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0,2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
-        let trade_day = trade_date.substring(0, 10);
-        let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?`, [
-            trade_date,
-            trade_day,
-            MOID,
-            tid,
-            applNum,
-            pay_pk
-        ])
-        console.log({
-            trade_date,
-            trade_day,
-            MOID,
-            tid,
-            applNum,
-            pay_pk
-        })
-        return response(req, res, 100, "success", []);
+        if (resultCode == '0000') {
+            let pay_pk = temp;
+            let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0, 2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
+            let trade_day = trade_date.substring(0, 10);
+            let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?`, [
+                trade_date,
+                trade_day,
+                MOID,
+                tid,
+                applNum,
+                pay_pk
+            ])
+            console.log(update_pay)
+            console.log({
+                trade_date,
+                trade_day,
+                MOID,
+                tid,
+                applNum,
+                pay_pk
+            })
+            return response(req, res, 100, "success", []);
+        } else {
+            return response(req, res, -100, resultMsg, [])
+        }
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
@@ -584,6 +588,7 @@ const getQueryByObject = (obj) => {
     let query = "";
     let keys = Object.keys(obj);
     for (var i = 0; i < keys.length; i++) {
+        
         query += `${keys[i]}=${obj[keys[i]]}&`;
     }
     query = query.substring(0, query.length - 1);
