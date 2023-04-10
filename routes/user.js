@@ -403,6 +403,14 @@ const onPayResult = async (req, res) => {
             applNum,
             pay_pk
         ])
+        console.log({
+            trade_date,
+            trade_day,
+            MOID,
+            tid,
+            applNum,
+            pay_pk
+        })
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
