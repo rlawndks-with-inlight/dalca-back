@@ -392,6 +392,7 @@ const onPayResult = async (req, res) => {
             buyerName,
             temp,
         } = req.body;
+        console.log(req.body)
         let pay_pk = temp;
         let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applDate.substring(8, 10)}:${applDate.substring(10, 12)}:${applDate.substring(12, 14)}`;
         let trade_day = trade_date.substring(0, 10);
