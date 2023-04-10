@@ -1,13 +1,18 @@
 const multer = require('multer');
 const sharp = require('sharp');
+const { checkLevel } = require('../util');
 const storage = multer.diskStorage({
         destination: function (req, file, cb) {
                 console.log(file)
                 cb(null, __dirname + `/../image/${file.fieldname}/`);
         },
         filename: function (req, file, cb) {
-                cb(null, Date.now() + `-${file.fieldname}.` + file.mimetype.split('/')[1])
-
+                const decode = checkLevel(req.cookies.token, 0);
+                let user_pk = "";
+                if (decode) {
+                        user_pk = `${decode?.pk}`;
+                }
+                cb(null, Date.now() + user_pk + `-${file.fieldname}.` + file.mimetype.split('/')[1])
         }
 })
 const fileFilter = (req, file, cb) => {

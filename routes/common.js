@@ -1307,6 +1307,7 @@ const addImageItems = (req, res) => {
         let files = { ...req.files };
         let files_keys = Object.keys(files);
         let result = [];
+        console.log(files)
         for (var i = 0; i < files_keys.length; i++) {
             result.push({
                 key: files_keys[i],
