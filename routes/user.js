@@ -394,7 +394,7 @@ const onPayResult = async (req, res) => {
         } = req.body;
         console.log(req.body)
         let pay_pk = temp;
-        let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applDate.substring(8, 10)}:${applDate.substring(10, 12)}:${applDate.substring(12, 14)}`;
+        let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0,2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
         let trade_day = trade_date.substring(0, 10);
         let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?`, [
             trade_date,
