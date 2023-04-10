@@ -12,7 +12,14 @@ const storage = multer.diskStorage({
                 if (decode) {
                         user_pk = `${decode?.pk}`;
                 }
-                cb(null, Date.now() + user_pk + `-${file.fieldname}.` + file.mimetype.split('/')[1])
+                console.log(file);
+                let file_type = "";
+                if(file.mimetype.includes('pdf')){
+                        file_type = 'pdf';
+                }else{
+                        file_type = file.mimetype.split('/')[1];
+                }
+                cb(null, Date.now() + user_pk + `-${file.fieldname}.` + file_type)
         }
 })
 const fileFilter = (req, file, cb) => {
