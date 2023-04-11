@@ -9,7 +9,9 @@ const {
     deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
 } = require('./common');
 const {
-    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult
+    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, 
+    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult,
+    addFamilyCard, updateFamilyCard
 } = require('./user');
 const image_list = [
     { name: 'master' },
@@ -26,6 +28,7 @@ const image_list = [
     { name: 'note' },
     { name: 'document_src' },
     { name: 'pdf' },
+    { name: 'card' },
 ]
 router.post('/addimageitems', upload.fields(image_list), addImageItems);
 router.post('/insertusermoneybyexcel', insertUserMoneyByExcel);
@@ -103,5 +106,7 @@ router.post('/pay/:edit_category', editPay);
 router.post('/paydirect', onPayByDirect);
 router.post('/paycanceldirect', onPayCancelByDirect);
 router.post('/payresult', onPayResult);
+router.post('/addfamilycard', addFamilyCard);
+router.post('/updatefamilycard', updateFamilyCard);
 
 module.exports = router;

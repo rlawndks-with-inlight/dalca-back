@@ -604,10 +604,99 @@ var getASE256Encrypt = ((val) => {
     return encrypted;
 });
 
-const apprBillKey = () => {
-
+const addFamilyCard = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        const {
+            card_number,
+            card_name,
+            card_expire,
+            card_cvc,
+            card_password,
+            birth,
+            family_type,
+            card_src,
+        } = req.body;
+        let result = await insertQuery(`
+        INSERT INTO user_card_table (
+            card_number,
+            card_name,
+            card_expire,
+            card_cvc,
+            card_password,
+            birth,
+            family_type,
+            user_pk,
+            card_src
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+        `, [
+            card_number,
+            card_name,
+            card_expire,
+            card_cvc,
+            card_password,
+            birth,
+            family_type,
+            decode?.pk,
+            card_src,
+        ])
+        return response(req, res, 100, "success", []);
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
 }
-
+const updateFamilyCard = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        const {
+            card_number,
+            card_name,
+            card_expire,
+            card_cvc,
+            card_password,
+            birth,
+            family_type,
+            card_src,
+            pk
+        } = req.body;
+        let result = await insertQuery(`UPDATE user_card_table SET 
+        card_number=?,
+        card_name=?,
+        card_expire=?,
+        card_cvc=?,
+        card_password=?,
+        birth=?,
+        family_type=?,
+        card_src=?
+        WHERE pk=?
+        `, [
+            card_number,
+            card_name,
+            card_expire,
+            card_cvc,
+            card_password,
+            birth,
+            family_type,
+            card_src,
+            pk
+        ])
+        return response(req, res, 100, "success", []);
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
 module.exports = {
-    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult
+    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
+    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult,
+    addFamilyCard, updateFamilyCard
 };
