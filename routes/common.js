@@ -538,7 +538,7 @@ const sendSms = (req, res) => {
             if (result.result_code == '1') {
                 return response(req, res, 100, "success", [])
             } else {
-                return response(req, res, -100, "fail", [])
+                return response(req, res, -100,result?.message, [])
             }
         });
     } catch (e) {

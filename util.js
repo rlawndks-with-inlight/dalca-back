@@ -152,7 +152,7 @@ const makeMaxPage = (num, page_cut) => {
         return parseInt(num / page_cut) + 1;
     }
 }
-const logRequestResponse = (req, res, decode) => {
+const logRequestResponse = async (req, res, decode) => {
 
     let requestIp;
     try {
@@ -180,18 +180,10 @@ const logRequestResponse = (req, res, decode) => {
     } else {
         user_pk = -1;
     }
-    db.query(
+    let result = await insertQuery(
         "INSERT INTO log_table (request, response_result, response_message, request_ip, user_id, user_pk) VALUES (?, ?, ?, ?, ?, ?)",
-        [request, res?.result, res?.message, requestIp, user_id, user_pk],
-        (err, result, fields) => {
-            if (err)
-                console.log(err)
-            else {
-                //console.log(result)
-            }
-        }
-    )
-
+        [request, res?.result, res?.message, requestIp, user_id, user_pk]
+    ) 
 }
 
 const tooMuchRequest = (num) => {

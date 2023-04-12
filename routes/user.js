@@ -619,6 +619,7 @@ const addFamilyCard = async (req, res) => {
             birth,
             family_type,
             card_src,
+            phone
         } = req.body;
         let result = await insertQuery(`
         INSERT INTO user_card_table (
@@ -630,9 +631,10 @@ const addFamilyCard = async (req, res) => {
             birth,
             family_type,
             user_pk,
-            card_src
+            card_src,
+            phone
         ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         `, [
             card_number,
@@ -644,6 +646,7 @@ const addFamilyCard = async (req, res) => {
             family_type,
             decode?.pk,
             card_src,
+            phone,
         ])
         return response(req, res, 100, "success", []);
     } catch (err) {
@@ -666,6 +669,7 @@ const updateFamilyCard = async (req, res) => {
             birth,
             family_type,
             card_src,
+            phone,
             pk
         } = req.body;
         let result = await insertQuery(`UPDATE user_card_table SET 
@@ -676,7 +680,8 @@ const updateFamilyCard = async (req, res) => {
         card_password=?,
         birth=?,
         family_type=?,
-        card_src=?
+        card_src=?,
+        phone=?
         WHERE pk=?
         `, [
             card_number,
@@ -687,6 +692,7 @@ const updateFamilyCard = async (req, res) => {
             birth,
             family_type,
             card_src,
+            phone,
             pk
         ])
         return response(req, res, 100, "success", []);
