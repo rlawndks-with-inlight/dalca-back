@@ -280,6 +280,12 @@ const getCustomInfo = async (req, res) => {
         let user_pk_list = my_contracts.map((item) => {
             return item[`${getEnLevelByNum(level)}_pk`]
         })
+        user_pk_list = new Set(user_pk_list);
+        user_pk_list = [...user_pk_list];
+        user_pk_list = user_pk_list.filter(
+            (element, i) => element
+        );
+
         let user_count = 0;
         if (user_pk_list.length > 0) {
             user_count = await dbQueryList(`SELECT COUNT(*) FROM user_table WHERE pk IN (${user_pk_list.join()}) `);

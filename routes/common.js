@@ -139,6 +139,9 @@ const onSignUp = async (req, res) => {
             office_name,
             company_number,
             office_address,
+            office_zip_code,
+            office_lng,
+            office_lat,
             office_phone,
             company_number_src,
             office_src,
@@ -181,6 +184,9 @@ const onSignUp = async (req, res) => {
             office_name,
             company_number,
             office_address,
+            office_zip_code,
+            office_lng,
+            office_lat,
             office_phone,
             company_number_src,
             office_src,
@@ -2048,8 +2054,9 @@ const getAddressByText = async (req, res) => {
         let client_id = 'p8k25t57ye';
         let client_secret = 'Nuqyt0Sj901zfBXVdFcXFdK6Fhzbsu2JFOVjXkW3';
         let api_url = 'https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode'; // json
+        console.log(text)
         if (!text) {
-            return response(req, res, -100, "주소명을 입력 후 검색 버튼을 눌러주세요.", result);
+            return response(req, res, -100, "주소명을 입력 후 검색 버튼을 눌러주세요.", []);
         }
         const coord = await axios.get(`${api_url}`, {
             params: {
