@@ -160,12 +160,12 @@ const onSignUp = async (req, res) => {
         let find_user = await dbQueryList(`SELECT * FROM user_table WHERE id=?`, [id]);
         find_user = find_user?.result;
         if (find_user.length > 0) {
-            return response(req, res, -100, "아이디가 중복됩니다.", []);
+            return response(req, res, -100, "아이디가 중복됩니다.", {step:0});
         }
         let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`, [phone]);
         find_phone = find_phone?.result;
         if (find_phone.length > 0) {
-            return response(req, res, -100, "휴대폰번호가 중복됩니다.", []);
+            return response(req, res, -100, "휴대폰번호가 중복됩니다.", {step:0});
         }
         pw = await makeHash(pw);
         pw = pw?.data;
@@ -1690,7 +1690,6 @@ const getItems = async (req, res) => {
         whereStr = await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
-
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }

@@ -360,6 +360,7 @@ const onPayByDirect = async (req, res) => {
             return response(req, res, -150, "이미 결제 하였습니다.", []);
         }
         let resp = await onPay(user, pay_item);
+        await db.beginTransaction();
         if (resp?.ResultCode == '00') {
             let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
             let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
@@ -371,12 +372,26 @@ const onPayByDirect = async (req, res) => {
                 resp?.ApplNum,
                 item_pk
             ])
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[item_pk]);
+            pay = pay?.result[0];
+            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+            setting = setting?.result[0];
+            let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100,
+                1,
+                pay?.pay_category,
+                pay[`${getEnLevelByNum(0)}_pk`],
+                item_pk
+            ])
+            await db.commit();
             return response(req, res, 100, "success", []);
         } else {
+            await db.rollback();
             return response(req, res, -100, resp?.ResultMsg, [])
         }
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
@@ -411,15 +426,17 @@ const onPayResult = async (req, res) => {
                 applNum,
                 pay_pk
             ])
-            console.log(update_pay)
-            console.log({
-                trade_date,
-                trade_day,
-                MOID,
-                tid,
-                applNum,
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[pay_pk]);
+            pay = pay?.result[0];
+            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+            setting = setting?.result[0];
+            let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100,
+                1,
+                pay?.pay_category,
+                pay[`${getEnLevelByNum(0)}_pk`],
                 pay_pk
-            })
+            ])
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -474,6 +491,8 @@ const onPayCancelByDirect = async (req, res) => {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
         }
         const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
+        await db.beginTransaction();
+            
         if (resp?.ResultCode == '00') {
             let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
             let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
@@ -490,8 +509,21 @@ const onPayCancelByDirect = async (req, res) => {
                 cancel_day,
                 pay_item?.transaction_num
             ])
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[item_pk]);
+            pay = pay?.result[0];
+            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+            setting = setting?.result[0];
+            let delete_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100*(-1),
+                -1,
+                pay?.pay_category,
+                pay[`${getEnLevelByNum(0)}_pk`],
+                pay_pk
+            ])
+            await db.commit();
             return response(req, res, 100, "success", []);
         } else {
+            await db.rollback();
             if (resp?.ResultCode == '01') {
                 return response(req, res, -100, '이미 취소한 거래입니다.', [])
             }
@@ -499,6 +531,7 @@ const onPayCancelByDirect = async (req, res) => {
         }
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }

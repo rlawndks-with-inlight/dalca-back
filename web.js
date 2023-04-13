@@ -81,6 +81,7 @@ overFiveTime = overFiveTime.getTime();
 const scheduleSystem = () => {
         let use_alarm = false;
         let use_create_pay = true;
+
         schedule.scheduleJob('0 0/1 * * * *', async function () {
                 let return_moment = returnMoment()
                 if (use_alarm) {
@@ -128,30 +129,30 @@ const scheduleSystem = () => {
                                 }
 
                                 let pay_list = [];
-                                console.log(contracts.length)
+                                let dead_day = 30;
                                 for (var i = 0; i < contracts.length; i++) {
                                         let end_date = contracts[i]?.end_date;
                                         let distance_day = differenceTwoDate(end_date, return_moment.substring(0, 10));
                                         console.log(distance_day)
                                         console.log(contracts[i])
                                         console.log(return_moment.substring(0, 10))
-                                        if (distance_day == 60) {
+                                        if (distance_day == dead_day) {
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone)],
-                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone)],
-                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone)],
-                                                                message: `\n${contracts[i]?.pk}번 월세 계약 만료 60일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                         }
@@ -171,13 +172,36 @@ const scheduleSystem = () => {
                                                 )
                                         }
                                 }
+                                let insert_deposit_list = [];
+                                for (var i = 0; i < contracts.length; i++) {
+                                        let distance_day = differenceTwoDate(return_moment.substring(0, 10), contracts[i]?.confirm_date.substring(0, 10));
+                                        if (distance_day == 7) {
+                                                insert_deposit_list.push([
+                                                        contracts[i][`${getEnLevelByNum(0)}_pk`],
+                                                        contracts[i][`${getEnLevelByNum(5)}_pk`],
+                                                        contracts[i][`${getEnLevelByNum(10)}_pk`],
+                                                        parseInt(contracts[i][`deposit`]) * 9 / 10,
+                                                        1,
+                                                        0,
+                                                        contracts[i][`pk`],
+                                                        return_moment.substring(0, 10)
+                                                ])
+                                        }
+                                }
+                                //계약 1주일 후 남은 90프로 보증금 결제 추가
+                                if (insert_deposit_list.length > 0) {
+                                        let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
+                                }
+                                //계약 만료 발송
                                 for (var i = 0; i < send_message_list.length; i++) {
                                         let result = await sendAligoSms({ receivers: send_message_list[i].phone, message: send_message_list[i].message })
                                 }
+                                //월세 입금 해야한다는거 추가
                                 if (pay_list.length > 0) {
                                         let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
                                 }
                         }
+
                 }
 
         })

@@ -457,14 +457,14 @@ const initialPay = async (contract) => {
         contract[`deposit`] > 0 &&
         contract[`monthly`] > 0
     ) {
-        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1 WHERE pk=?`, [contract[`pk`]]);
+        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1, confirm_date=? WHERE pk=?`, [returnMoment(), contract[`pk`]]);
         let result2 = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 contract[`${getEnLevelByNum(0)}_pk`],
                 contract[`${getEnLevelByNum(5)}_pk`],
                 contract[`${getEnLevelByNum(10)}_pk`],
-                contract[`deposit`],
-                1,
+                parseInt(contract[`deposit`])/10,
+                2,
                 0,
                 contract[`pk`],
                 returnMoment().substring(0, 10)
