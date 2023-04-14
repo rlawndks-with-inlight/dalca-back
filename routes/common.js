@@ -644,7 +644,12 @@ const checkExistIdByManager = (req, res) => {
                 console.log(err)
                 return response(req, res, -200, "서버 에러 발생", [])
             } else {
-                return response(req, res, 100, "success", result[0])
+                if(result.length>0){
+                    return response(req, res, 100, "success", result[0])
+
+                }else{
+                    return response(req, res, -100, "찾을 수 없는 유저입니다.", [])
+                }
             }
         })
 
@@ -1069,7 +1074,7 @@ const addItem = async (req, res) => {
         let sql = `INSERT INTO ${table}_table (${keys.join()}) VALUES (${values_str}) `;
         await db.beginTransaction();
         let result = await insertQuery(sql, values);
-        let not_use_sort = ['subscribe', 'real_estate'];
+        let not_use_sort = ['subscribe', 'real_estate', 'point'];
         if (!not_use_sort.includes(table)) {
             let result2 = await insertQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
         }
@@ -1701,6 +1706,7 @@ const getItems = async (req, res) => {
 
             let want_use_count = ['user', 'comment'];
             result = await listFormatBySchema(table, result);
+
             let maxPage = page_result[0]['COUNT(*)'] % page_cut == 0 ? (page_result[0]['COUNT(*)'] / page_cut) : ((page_result[0]['COUNT(*)'] - page_result[0]['COUNT(*)'] % page_cut) / page_cut + 1);
             let option_obj = await getOptionObjBySchema(table, whereStr);
             if (want_use_count.includes(table)) {
@@ -1889,7 +1895,6 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
     let page_result = [{ 'COUNT(*)': 0 }];
     let result = [];
     let { statistics_type, statistics_year, statistics_month, page_cut, page, keyword } = body;
-
     if (another_get_item_schema.includes(schema) && decode?.user_level >= 40) {
         if (schema == 'user_statistics') {
             statistics_month = statistics_month ?? 1;
@@ -2063,6 +2068,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
         page_result = page_result?.result;
         result = await dbQueryList(sql);
         result = result?.result;
+
     }
     return {
         page_result: page_result,

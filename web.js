@@ -35,7 +35,7 @@ const schedule = require('node-schedule');
 
 const path = require('path');
 const { insertQuery } = require('./query-util')
-const { getItem, sendAligoSms } = require('./routes/common')
+const {  sendAligoSms } = require('./routes/common')
 app.set('/routes', __dirname + '/routes');
 app.use('/config', express.static(__dirname + '/config'));
 //app.use('/image', express.static('./upload'));
@@ -136,23 +136,23 @@ const scheduleSystem = () => {
                                         console.log(distance_day)
                                         console.log(contracts[i])
                                         console.log(return_moment.substring(0, 10))
-                                        if (distance_day == dead_day) {
+                                        if (distance_day <= dead_day && distance_day >= 1) {
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]?.phone)],
-                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${distance_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(5)}_pk`]]?.phone)],
-                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${distance_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
                                                                 phone: [users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone, formatPhoneNumber(users_obj[contracts[i][`${getEnLevelByNum(10)}_pk`]]?.phone)],
-                                                                message: `\n월세 계약 만료 ${dead_day}일 남았습니다.\n\n-달카페이-`
+                                                                message: `\n월세 계약 만료 ${distance_day}일 남았습니다.\n\n-달카페이-`
                                                         })
                                                 }
                                         }

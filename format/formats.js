@@ -1,43 +1,60 @@
 const { commarNumber, getEnLevelByNum } = require("../util");
 
+
 const listFormatBySchema = (schema, data_, body_) => {
 
     let data = [...data_];
 
     let option_list = {};
-    if (schema == 'academy_category') {
-        option_list = {
-        }
-        for (var i = 0; i < data.length; i++) {
-            for(var j = 0;j<Object.keys(option_list).length;j++){
-                let obj = option_list[Object.keys(option_list)[j]].find(e=>e.val==data[i][Object.keys(option_list)[j]])
-                data[i][Object.keys(option_list)[j]] = obj.name;
+    if(schema == 'point'){
+        for(var i=0;i<data.length;i++){
+            console.log(data[i])
+            if(data[i]?.type==0){//월세
+                if(data[i]?.status==1){
+                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 ${data[i]?.pay_day.substring(0, 7)} 일자 월세 결제에 의해 발생`;
+                    data[i]['user_note'] = `${data[i]?.pay_day.substring(0, 7)} 일자 월세 결제에 의해 발생`;
+                }else{
+                    data[i]['manager_note'] = `포인트 취소`;
+                    data[i]['user_note'] = `포인트 취소`;
+                }
+            }else if(data[i]?.type==1){//보증금
+                if(data[i]?.status==1){
+                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 보증금 결제에 의해 발생`;
+                    data[i]['user_note'] = `보증금 결제에 의해 발생`;
+                }else{
+                    data[i]['manager_note'] = `포인트 취소`;
+                    data[i]['user_note'] = `포인트 취소`;
+                }
+            }else if(data[i]?.type==2){//계약금
+                if(data[i]?.status==1){
+                    data[i]['manager_note'] = ``;
+                    data[i]['user_note'] = ``;
+                }else{
+                    data[i]['manager_note'] = `포인트 취소`;
+                    data[i]['user_note'] = `포인트 취소`;
+                }
+            }else if(data[i]?.type==10){//취소
+                if(data[i]?.status==1){
+                    data[i]['manager_note'] = ``;
+                    data[i]['user_note'] = ``;
+                }else{
+                    data[i]['manager_note'] = ``;
+                    data[i]['user_note'] = ``;
+                }
+            }else if(data[i]?.type==15){//관리자수정
+                if(data[i]?.status==1){
+                    data[i]['manager_note'] = `관리자에 의해 추가`;
+                    data[i]['user_note'] = `관리자에 의해 추가`;
+                }else{
+                    data[i]['manager_note'] = `관리자에 의해 차감`;
+                    data[i]['user_note'] = `관리자에 의해 취소`;
+                }
             }
         }
     }
-    if(schema=='subscribe'){
-        for (var i = 0; i < data.length; i++) {
-            if(data[i]?.type==0){
-                data[i].type = '카드결제';
-            }else if(data[i]?.type==1){
-                data[i].type = '무통장입금';
-            }else if(data[i]?.type==2){
-                data[i].type = '기타';
-            }else{
-                data[i].type = '---';
-            }
-            if(data[i]?.transaction_status>=0){
-                data[i]['approve_price'] = commarNumber(data[i]?.price);
-                data[i]['cancel_price'] = "---";
-            }else{
-                data[i]['approve_price'] = "---";
-                data[i]['cancel_price'] = commarNumber(data[i]?.price*(-1));
-            }
-            data[i]['period'] = `${data[i]?.start_date} ~ ${data[i]?.end_date}`
-        }
-    }
+    
     if(schema)
-    return data;
+        return data;
 }
 const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
     let sql = sql_;
@@ -103,6 +120,18 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
         order = 'pk'
     }
     else if(schema=='point'){
+        let columns = [
+            'point_table.*',
+            'user_table.id AS user_id',
+            'user_table.name AS user_name',
+            'pay_table.contract_pk AS contract_pk',
+            'pay_table.day AS pay_day',
+            'pay_table.type AS pay_type',
+            'pay_table.price AS pay_price',
+        ]
+        sql = ` SELECT ${columns.join()} FROM point_table `;
+        sql += ` LEFT JOIN user_table ON point_table.user_pk=user_table.pk `;
+        sql += ` LEFT JOIN pay_table ON point_table.pay_pk=pay_table.pk `;
         if(decode?.user_level==0 ||decode?.user_level==5 ||decode?.user_level==10 ){
             where_str += ` AND user_pk=${decode?.pk} `
         }
