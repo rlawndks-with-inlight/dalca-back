@@ -102,6 +102,12 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
         }
         order = 'pk'
     }
+    else if(schema=='point'){
+        if(decode?.user_level==0 ||decode?.user_level==5 ||decode?.user_level==10 ){
+            where_str += ` AND user_pk=${decode?.pk} `
+        }
+        order = 'pk'
+    }
     return {
         page_sql:page_sql,
         sql:sql,

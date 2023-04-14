@@ -121,6 +121,7 @@ const getHomeContent = async (req, res) => {
             { table: 'notice', sql: 'SELECT notice_table.*, user_table.nickname FROM notice_table LEFT JOIN user_table ON notice_table.user_pk=user_table.pk WHERE notice_table.status=1 ORDER BY notice_table.sort DESC LIMIT 2', type: 'list' },
             { table: 'setting', sql: 'SELECT * FROM setting_table', type: 'obj' },
             { table: 'contract', sql: `SELECT * FROM v_contract ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
+            { table: 'point', sql: `SELECT * FROM point_table WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
         ];
 
@@ -377,7 +378,7 @@ const onPayByDirect = async (req, res) => {
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100,
+                parseInt(pay?.price)*(setting?.point_percent)/100,
                 1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
@@ -431,7 +432,7 @@ const onPayResult = async (req, res) => {
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100,
+                parseInt(pay?.price)*(setting?.point_percent)/100,
                 1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
@@ -514,7 +515,7 @@ const onPayCancelByDirect = async (req, res) => {
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let delete_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.realtor_charge_percent)/100*(-1),
+                parseInt(pay?.price)*(setting?.point_percent)/100*(-1),
                 -1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
