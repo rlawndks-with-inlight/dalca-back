@@ -360,7 +360,7 @@ const getKewordListBySchema = (schema_) => {
     let schema = schema_;
     let list = [];
     if (schema == 'user') {
-        list = ['id', 'name', 'phone', 'id_number'];
+        list = ['id', 'name', 'phone', 'id_number', 'office_address', 'office_zip_code', 'office_name', 'office_phone'];
     } else if (schema == 'comment') {
         list = ['user_table.id', 'user_table.nickname', 'note', 'item_title'];
     } else if (schema == 'contract') {

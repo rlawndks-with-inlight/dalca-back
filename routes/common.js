@@ -1695,7 +1695,7 @@ const getItems = async (req, res) => {
         }
         if (page) {
             sql += ` LIMIT ${(page - 1) * page_cut}, ${page_cut}`;
-            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body);
+            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body, decode);
             let page_result = get_result?.page_result;
             let result = get_result?.result;
 
@@ -1711,7 +1711,7 @@ const getItems = async (req, res) => {
             }
             return response(req, res, 100, "success", { data: result, maxPage: maxPage, option_obj: option_obj });
         } else {
-            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body);
+            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body, decode);
             let result = get_result?.result;
             result = await listFormatBySchema(table, result);
             return response(req, res, 100, "success", result);
@@ -1880,17 +1880,18 @@ const editPay = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_) => {
+const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) => {
     let sql = sql_;
     let pageSql = pageSql_;
     let schema = schema_;
     let body = body_;
-    let another_get_item_schema = ['user_statistics'];
+    let another_get_item_schema = ['user_statistics', 'real_estate'];
     let page_result = [{ 'COUNT(*)': 0 }];
     let result = [];
-    if (another_get_item_schema.includes(schema)) {
+    let { statistics_type, statistics_year, statistics_month, page_cut, page, keyword } = body;
+
+    if (another_get_item_schema.includes(schema) && decode?.user_level >= 40) {
         if (schema == 'user_statistics') {
-            let { statistics_type, statistics_year, statistics_month, page_cut, page } = body;
             statistics_month = statistics_month ?? 1;
             statistics_type = statistics_type ?? 'month';
             statistics_year = statistics_year ?? returnMoment().substring(0, 4);
@@ -1990,7 +1991,73 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_) => {
             }
             result = result_list;
         }
+        if (schema == 'real_estate') {
+            let result_list = [];
+            let user_keyword_columns = getKewordListBySchema('user');
+            let where_str_user = ""
+            let real_keyword_columns = getKewordListBySchema('real_estate');
+            let where_str_real = ""
 
+            if (keyword) {
+                if (user_keyword_columns?.length > 0) {
+                    where_str_user += " AND (";
+                    for (var i = 0; i < user_keyword_columns.length; i++) {
+                        where_str_user += ` ${i != 0 ? 'OR' : ''} ${user_keyword_columns[i]} LIKE '%${keyword}%' `;
+                    }
+                    where_str_user += ")";
+                }
+                if (real_keyword_columns?.length > 0) {
+                    where_str_real += " WHERE (";
+                    for (var i = 0; i < real_keyword_columns.length; i++) {
+                        where_str_real += ` ${i != 0 ? 'OR' : ''} ${real_keyword_columns[i]} LIKE '%${keyword}%' `;
+                    }
+                    where_str_real += ")";
+                }
+            }
+            let sql_list = [
+                { table: 'user', sql: `SELECT * FROM user_table WHERE user_level=10 ${where_str_user} ORDER BY pk DESC`, type: 'list' },
+                { table: 'real_estate', sql: `SELECT * FROM real_estate_table ${where_str_real} ORDER BY pk DESC`, type: 'list' },
+            ];
+            
+            for (var i = 0; i < sql_list.length; i++) {
+                result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
+            }
+            for (var i = 0; i < result_list.length; i++) {
+                await result_list[i];
+            }
+            let result_obj = {};
+            for (var i = 0; i < sql_list.length; i++) {
+                result_list.push(queryPromise(sql_list[i].table, sql_list[i].sql, sql_list[i].type));
+            }
+            for (var i = 0; i < result_list.length; i++) {
+                await result_list[i];
+            }
+            let when_result = (await when(result_list));
+            for (var i = 0; i < (await when_result).length; i++) {
+                result_obj[(await when_result[i])?.table] = (await when_result[i])?.data;
+            }
+            for(var i =0;i<result_obj['user'].length;i++){
+                result_obj['user'][i]['name'] = result_obj['user'][i]['office_name'];
+                result_obj['user'][i]['phone'] = result_obj['user'][i]['office_phone'];
+                result_obj['user'][i]['address'] = result_obj['user'][i]['office_address'];
+                result_obj['user'][i]['zip_code'] = result_obj['user'][i]['office_zip_code'];
+                result_obj['user'][i]['address_detail'] = '---';
+                result_obj['user'][i]['lat'] = result_obj['user'][i]['office_lat'];
+                result_obj['user'][i]['lng'] = result_obj['user'][i]['office_lng'];
+                result_obj['user'][i]['table'] = 'user';
+            }
+            let list = [...result_obj['user'], ...result_obj['real_estate']];
+            page_result = [{ 'COUNT(*)': list.length }];
+            list = list.sort((a, b) => {
+                if (a.date > b.date) return 1;
+                if (a.date < b.date) return -1;
+                return 0;
+            });
+            if (page) {
+                list = list.slice((page - 1) * page_cut, (page) * page_cut)
+            }
+            result = list;
+        }
     } else {
         page_result = await dbQueryList(pageSql);
         page_result = page_result?.result;
