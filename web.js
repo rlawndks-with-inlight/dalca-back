@@ -196,9 +196,13 @@ const scheduleSystem = () => {
                                 for (var i = 0; i < send_message_list.length; i++) {
                                         let result = await sendAligoSms({ receivers: send_message_list[i].phone, message: send_message_list[i].message })
                                 }
-                                //월세 입금 해야한다는거 추가
+                                //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
                                         let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+                                        let send_message = `${return_moment.substring(0, 10)} 일자 월세 납부 바랍니다.\n\n-달카페이-`;
+                                        for(var i = 0;i<pay_list.length;i++){
+                                                let result2 = await sendAligoSms({ receivers: users_obj[pay_list[i][0]].phone, message: send_message })
+                                        }
                                 }
                         }
 
