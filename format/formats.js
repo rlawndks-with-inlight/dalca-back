@@ -27,8 +27,8 @@ const listFormatBySchema = (schema, data_, body_) => {
                 }
             }else if(data[i]?.type==2){//계약금
                 if(data[i]?.status==1){
-                    data[i]['manager_note'] = ``;
-                    data[i]['user_note'] = ``;
+                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약금 결제에 의해 발생`;
+                    data[i]['user_note'] = `계약금 결제에 의해 발생`;
                 }else{
                     data[i]['manager_note'] = `포인트 취소`;
                     data[i]['user_note'] = `포인트 취소`;

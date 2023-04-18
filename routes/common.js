@@ -146,6 +146,7 @@ const onSignUp = async (req, res) => {
             company_number_src,
             office_src,
             bank_book_src,
+            id_number_src,
             bank_name,
             account_number,
         } = req.body;
@@ -166,7 +167,7 @@ const onSignUp = async (req, res) => {
         let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`, [phone]);
         find_phone = find_phone?.result;
         if (find_phone.length > 0) {
-            return response(req, res, -100, "휴대폰번호가 중복됩니다.", {step:0});
+            //return response(req, res, -100, "휴대폰번호가 중복됩니다.", {step:0});
         }
         pw = await makeHash(pw);
         pw = pw?.data;
@@ -196,7 +197,7 @@ const onSignUp = async (req, res) => {
             bank_name,
             account_number,
         }
-        let type_number = ['user_level', 'type']
+        let type_number = ['user_level', 'type', 'office_lng', 'office_lat']
         let insertKeys = Object.keys(insert_obj);
         let insertValues = [];
         for (var i = 0; i < insertKeys.length; i++) {
