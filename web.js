@@ -194,7 +194,7 @@ const scheduleSystem = () => {
                                 }
                                 //계약 만료 발송
                                 for (var i = 0; i < send_message_list.length; i++) {
-                                        let result = await sendAligoSms({ receivers: send_message_list[i].phone, message: send_message_list[i].message })
+                                        //let result = await sendAligoSms({ receivers: send_message_list[i].phone, message: send_message_list[i].message })
                                 }
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {

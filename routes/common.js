@@ -146,7 +146,8 @@ const onSignUp = async (req, res) => {
             company_number_src,
             office_src,
             bank_book_src,
-            id_number_src,
+            bank_name,
+            account_number,
         } = req.body;
         console.log(req.body)
         let is_manager = false;
@@ -192,6 +193,8 @@ const onSignUp = async (req, res) => {
             office_src,
             bank_book_src,
             id_number_src,
+            bank_name,
+            account_number,
         }
         let type_number = ['user_level', 'type']
         let insertKeys = Object.keys(insert_obj);
