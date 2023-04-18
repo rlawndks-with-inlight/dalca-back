@@ -20,7 +20,7 @@ const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
 const {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
     getDatasWithKeywordAtPage, getDatasAtPage,
-    getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, insertQuery, getTableAI
+    getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, activeQuery, getTableAI
 } = require('../query-util')
 
 const { sendAligoSms } = require('./common')
@@ -65,7 +65,7 @@ const addContract = async (req, res) => {
             return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
         }
         const { deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
-        let result = await insertQuery('INSERT INTO contract_table ( deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        let result = await activeQuery('INSERT INTO contract_table ( deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
         return response(req, res, 100, "success", {
             result_pk: result?.result?.insertId
@@ -96,7 +96,7 @@ const updateContract = async (req, res) => {
             }
             value_str += `, document_src=?`
         }
-        let result = await insertQuery(`UPDATE contract_table SET ${value_str} WHERE pk=${pk}`, value_list);
+        let result = await activeQuery(`UPDATE contract_table SET ${value_str} WHERE pk=${pk}`, value_list);
         return response(req, res, 100, "success", []);
     }
     catch (err) {
@@ -176,7 +176,7 @@ const requestContractAppr = async (req, res) => {
         await sendAligoSms({ receivers: receiver, message: content }).then(async (result) => {
             console.log(result)
             if (result.result_code == '1') {
-                let result = await insertQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=${user_pk} WHERE pk=${contract_pk}`);
+                let result = await activeQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=${user_pk} WHERE pk=${contract_pk}`);
                 return response(req, res, 100, "success", []);
             } else {
                 return response(req, res, -100, "fail", [])
@@ -204,7 +204,7 @@ const confirmContractAppr = async (req, res) => {
             return response(req, res, -100, "이미 수락한 계약입니다.", []);
         }
         await db.beginTransaction();
-        let result = await insertQuery(`UPDATE contract_table SET ${getEnLevelByNum(decode?.user_level)}_appr=1 WHERE pk=${contract_pk}`);
+        let result = await activeQuery(`UPDATE contract_table SET ${getEnLevelByNum(decode?.user_level)}_appr=1 WHERE pk=${contract_pk}`);
 
         let now_contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${contract_pk}`);
         now_contract = now_contract?.result[0];
@@ -229,7 +229,7 @@ const onResetContractUser = async (req, res) => {
         if (contract?.realtor_pk != decode?.pk) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        let result = await insertQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=NULL, ${getEnLevelByNum(request_level)}_appr=0 WHERE pk=${contract_pk}`);
+        let result = await activeQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=NULL, ${getEnLevelByNum(request_level)}_appr=0 WHERE pk=${contract_pk}`);
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
@@ -261,7 +261,7 @@ const onChangeCard = async (req, res) => {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
         let bill_key = create_bill_key?.data;
-        let result = await insertQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, pk]);
+        let result = await activeQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, pk]);
 
         return response(req, res, 100, "success", []);
     } catch (err) {
@@ -365,7 +365,7 @@ const onPayByDirect = async (req, res) => {
         if (resp?.ResultCode == '00') {
             let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
             let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
-            let update_pay = await insertQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=? WHERE pk=?`, [
+            let update_pay = await activeQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=? WHERE pk=?`, [
                 trade_date,
                 trade_day,
                 resp?.oid,
@@ -378,7 +378,7 @@ const onPayByDirect = async (req, res) => {
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             if(pay?.pay_category==0){
-                let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
                     parseInt(pay?.price)*(setting?.point_percent)/100,
                     1,
                     pay?.pay_category,
@@ -389,7 +389,7 @@ const onPayByDirect = async (req, res) => {
             if(pay?.pay_category==2){
                 let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
                 contract = contract?.result[0];
-                let insert_deposit = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
                     pay[`${getEnLevelByNum(0)}_pk`],
                     pay[`${getEnLevelByNum(5)}_pk`],
                     pay[`${getEnLevelByNum(10)}_pk`],
@@ -436,7 +436,7 @@ const onPayResult = async (req, res) => {
             let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0, 2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
             let trade_day = trade_date.substring(0, 10);
             await db.beginTransaction();
-            let update_pay = await insertQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?", [
+            let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?", [
                 trade_date,
                 trade_day,
                 MOID,
@@ -449,7 +449,7 @@ const onPayResult = async (req, res) => {
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             if(pay?.pay_category==0){
-                let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
                     parseInt(pay?.price)*(setting?.point_percent)/100,
                     1,
                     pay?.pay_category,
@@ -460,7 +460,7 @@ const onPayResult = async (req, res) => {
             if(pay?.pay_category==2){
                 let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
                 contract = contract?.result[0];
-                let insert_deposit = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
                     pay[`${getEnLevelByNum(0)}_pk`],
                     pay[`${getEnLevelByNum(5)}_pk`],
                     pay[`${getEnLevelByNum(10)}_pk`],
@@ -479,6 +479,28 @@ const onPayResult = async (req, res) => {
             return response(req, res, -100, resultMsg, [])
         }
     } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const onWantPayCancel = async (req, res) =>{// 취소요청
+    try {
+        const decode = checkLevel(req.cookies.token, 0);
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        const {pay_pk} = req.body;
+        let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${pay_pk}`);
+        pay = pay?.result[0];
+        if(decode?.pk != pay[`${getEnLevelByNum(0)}_pk`]){
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        if(pay?.is_want_cancel == -1 || pay?.is_want_cancel == 1){
+            return response(req, res, -150, "이미 취소요청을 보낸 결제입니다.", []);
+        }
+        let result = await activeQuery(`UPDATE pay_table SET is_want_cancel=1 WHERE pk=${pay_pk}`);
+        return response(req, res, 100, "success", []);
+    }catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }
@@ -531,7 +553,7 @@ const onPayCancelByDirect = async (req, res) => {
         if (resp?.ResultCode == '00') {
             let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
             let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
-            let result = await insertQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+            let result = await activeQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
                 pay_item?.landlord_pk,
                 pay_item?.lessee_pk,
                 pay_item?.realtor_pk,
@@ -548,13 +570,14 @@ const onPayCancelByDirect = async (req, res) => {
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
-            let delete_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+            let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
                 parseInt(pay?.price)*(setting?.point_percent)/100*(-1),
                 -1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
                 pay_pk
             ])
+            let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`,[item_pk]);
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -695,7 +718,7 @@ const addFamilyCard = async (req, res) => {
             card_src,
             phone
         } = req.body;
-        let result = await insertQuery(`
+        let result = await activeQuery(`
         INSERT INTO user_card_table (
             card_number,
             card_name,
@@ -746,7 +769,7 @@ const updateFamilyCard = async (req, res) => {
             phone,
             pk
         } = req.body;
-        let result = await insertQuery(`UPDATE user_card_table SET 
+        let result = await activeQuery(`UPDATE user_card_table SET 
         card_number=?,
         card_name=?,
         card_expire=?,
@@ -777,6 +800,6 @@ const updateFamilyCard = async (req, res) => {
 }
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
-    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult,
+    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard
 };

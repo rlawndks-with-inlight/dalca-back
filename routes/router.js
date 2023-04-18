@@ -9,8 +9,8 @@ const {
     deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
 } = require('./common');
 const {
-    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser, 
-    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult,
+    addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
+    onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard
 } = require('./user');
 const image_list = [
@@ -108,5 +108,6 @@ router.post('/paycanceldirect', onPayCancelByDirect);
 router.post('/payresult', onPayResult);
 router.post('/addfamilycard', addFamilyCard);
 router.post('/updatefamilycard', updateFamilyCard);
+router.post('/wantpaycancel', onWantPayCancel);
 
 module.exports = router;

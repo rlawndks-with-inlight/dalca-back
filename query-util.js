@@ -40,7 +40,7 @@ const dbQueryList = (sql,list) => {
         })
     })
 }
-const insertQuery = (sql, list) => {
+const activeQuery = (sql, list) => {
     return new Promise((resolve, reject) => {
         db.query(sql, list, (err, result, fields) => {
             if (err) {
@@ -262,5 +262,5 @@ module.exports = {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
     getDatasWithKeywordAtPage, getDatasAtPage,
     getKioskList, getItemRows, getItemList,
-    dbQueryList, dbQueryRows, insertQuery, getTableAI
+    dbQueryList, dbQueryRows, activeQuery, getTableAI
 }

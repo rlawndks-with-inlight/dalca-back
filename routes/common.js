@@ -19,7 +19,7 @@ const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
 const {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
     getDatasWithKeywordAtPage, getDatasAtPage,
-    getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, insertQuery, getTableAI
+    getKioskList, getItemRows, getItemList, dbQueryList, dbQueryRows, activeQuery, getTableAI
 } = require('../query-util')
 const macaddress = require('node-macaddress');
 
@@ -60,7 +60,7 @@ const addAlarm = (req, res) => {
             else {
                 if (type == 0) {
                     sendAlarm(title, note, "alarm", result.insertId, url);
-                    insertQuery("INSERT INTO alarm_log_table (title, note, item_table, item_pk, url) VALUES (?, ?, ?, ?, ?)", [title, note, "alarm", result.insertId, url])
+                    activeQuery("INSERT INTO alarm_log_table (title, note, item_table, item_pk, url) VALUES (?, ?, ?, ?, ?)", [title, note, "alarm", result.insertId, url])
                 }
                 await db.query("UPDATE alarm_table SET sort=? WHERE pk=?", [result.insertId, result.insertId], (err, result) => {
                     if (err) {
@@ -218,8 +218,8 @@ const onSignUp = async (req, res) => {
             result_msg = '성공적으로 추가 되었습니다.';
         }
         await db.beginTransaction();
-        let result = await insertQuery(`INSERT INTO user_table (${insertKeys.join()}) VALUES (${getQuestions(insertKeys.length).join()})`, insertValues);
-        let result2 = await insertQuery("UPDATE user_table SET sort=? WHERE pk=?", [result?.result?.insertId, result?.result?.insertId]);
+        let result = await activeQuery(`INSERT INTO user_table (${insertKeys.join()}) VALUES (${getQuestions(insertKeys.length).join()})`, insertValues);
+        let result2 = await activeQuery("UPDATE user_table SET sort=? WHERE pk=?", [result?.result?.insertId, result?.result?.insertId]);
         await db.commit();
         return response(req, res, 200, result_msg, []);
 
@@ -391,7 +391,7 @@ const editMyInfo = async (req, res) => {
             return response(req, res, -100, "비밀번호가 일치하지 않습니다.", [])
         }
         if (typeNum == 0) {
-            let result = insertQuery("UPDATE user_table SET zip_code=?, address=?, address_detail=?, account_holder=?, bank_name=?, account_number=? WHERE pk=?", [zip_code, address, address_detail, account_holder, bank_name, account_number, decode?.pk]);
+            let result = activeQuery("UPDATE user_table SET zip_code=?, address=?, address_detail=?, account_holder=?, bank_name=?, account_number=? WHERE pk=?", [zip_code, address, address_detail, account_holder, bank_name, account_number, decode?.pk]);
             return response(req, res, 100, "success", []);
         } else {
 
@@ -473,7 +473,7 @@ const onResign = async (req, res) => {
             return response(req, res, -100, "비밀번호가 일치하지 않습니다.", []);
         }
         await db.beginTransaction();
-        let result = await insertQuery("DELETE FROM user_table WHERE pk=?", [decode?.pk]);
+        let result = await activeQuery("DELETE FROM user_table WHERE pk=?", [decode?.pk]);
         await res.clearCookie('token');
 
         await db.commit();
@@ -866,7 +866,7 @@ const updateUser = async (req, res) => {
             values.push(body[keys[i]])
         }
         values.push(pk);
-        let result = await insertQuery(`UPDATE user_table SET ${keys.join('=?, ')}=? WHERE pk=?`, values);
+        let result = await activeQuery(`UPDATE user_table SET ${keys.join('=?, ')}=? WHERE pk=?`, values);
         return response(req, res, 100, "success", [])
 
     } catch (err) {
@@ -1077,10 +1077,10 @@ const addItem = async (req, res) => {
         }
         let sql = `INSERT INTO ${table}_table (${keys.join()}) VALUES (${values_str}) `;
         await db.beginTransaction();
-        let result = await insertQuery(sql, values);
+        let result = await activeQuery(sql, values);
         let not_use_sort = ['subscribe', 'real_estate', 'point'];
         if (!not_use_sort.includes(table)) {
-            let result2 = await insertQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
+            let result2 = await activeQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
         }
         await db.commit();
         return response(req, res, 200, "success", []);
@@ -1161,10 +1161,10 @@ const addItemByUser = async (req, res) => {
         values = setting?.values;
         let sql = `INSERT INTO ${table}_table (${keys.join()}) VALUES (${values_str}) `;
         await db.beginTransaction();
-        let result = await insertQuery(sql, values);
+        let result = await activeQuery(sql, values);
 
         console.log(result)
-        //let result2 = await insertQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
+        //let result2 = await activeQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
 
         await db.commit();
         return response(req, res, 200, "success", []);
@@ -1235,7 +1235,7 @@ const updateItem = async (req, res) => {
         let sql = `UPDATE ${table}_table SET ${keys.join("=?,")}=? WHERE pk=?`;
         values.push(req.body.pk);
         await db.beginTransaction();
-        let result = await insertQuery(sql, values);
+        let result = await activeQuery(sql, values);
         let result2 = await updatePlusUtil(table, req.body);
         await db.commit();
         return response(req, res, 200, "success", []);
@@ -1248,7 +1248,7 @@ const updateItem = async (req, res) => {
 }
 const updatePlusUtil = async (schema, body) => {
     if (schema == 'academy_category') {
-        let result = await insertQuery(`UPDATE subscribe_table SET end_date=? WHERE academy_category_pk=?`, [body?.end_date, body?.pk]);
+        let result = await activeQuery(`UPDATE subscribe_table SET end_date=? WHERE academy_category_pk=?`, [body?.end_date, body?.pk]);
     }
 }
 
@@ -1814,7 +1814,7 @@ const editContract = async (req, res) => {
             sql = ` UPDATE contract_table SET ${keys.join('=?, ')}=? WHERE pk=?`;
         }
         await db.beginTransaction();
-        let result = await insertQuery(sql, values);
+        let result = await activeQuery(sql, values);
 
         if (body['landlord_appr'] == 1 && body['lessee_appr'] == 1) {
             if (req.body.pk) {
@@ -1883,7 +1883,7 @@ const editPay = async (req, res) => {
             values.push(req.body.pk);
             sql = ` UPDATE pay_table SET ${keys.join('=?, ')}=? WHERE pk=?`;
         }
-        let result = await insertQuery(sql, values);
+        let result = await activeQuery(sql, values);
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
@@ -2235,9 +2235,9 @@ const onSubscribe = async (req, res) => {
         }
         let result = undefined;
         if (bag_pk) {
-            result = insertQuery(`UPDATE subscribe_table SET status=1, price=? WHERE pk=?`, [((item?.price ?? 0) * ((100 - item?.discount_percent) / 100)), bag_pk])
+            result = activeQuery(`UPDATE subscribe_table SET status=1, price=? WHERE pk=?`, [((item?.price ?? 0) * ((100 - item?.discount_percent) / 100)), bag_pk])
         } else {
-            result = insertQuery(`INSERT INTO subscribe_table (${keys.join()}) VALUES (${keys_q.join()})`, values);
+            result = activeQuery(`INSERT INTO subscribe_table (${keys.join()}) VALUES (${keys_q.join()})`, values);
         }
         await db.commit();
         return response(req, res, 100, "success", []);
@@ -2628,7 +2628,7 @@ const insertUserMoneyByExcel = async (req, res) => {
                 ])
             }
             await db.beginTransaction();
-            let result = await insertQuery(`INSERT INTO subscribe_table (user_pk, academy_category_pk, master_pk, price, status, trade_date, type, transaction_status) VALUES ? `, [insert_list]);
+            let result = await activeQuery(`INSERT INTO subscribe_table (user_pk, academy_category_pk, master_pk, price, status, trade_date, type, transaction_status) VALUES ? `, [insert_list]);
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -2686,8 +2686,8 @@ const orderInsert = async (decode, body, params) => {
                     approval_num: resp?.data?.approval_no
                 };
                 await db.beginTransaction();
-                let delete_bag_result = await insertQuery(`DELETE FROM subscribe_table WHERE user_pk=? AND status=0 AND academy_category_pk=?`, [decode?.pk, item?.pk]);
-                let insert_perchase_result = await insertQuery(`INSERT INTO subscribe_table (${Object.keys(keys).join()}) VALUES (${Object.keys(keys).map(() => { return "?" })})`, Object.values(keys));
+                let delete_bag_result = await activeQuery(`DELETE FROM subscribe_table WHERE user_pk=? AND status=0 AND academy_category_pk=?`, [decode?.pk, item?.pk]);
+                let insert_perchase_result = await activeQuery(`INSERT INTO subscribe_table (${Object.keys(keys).join()}) VALUES (${Object.keys(keys).map(() => { return "?" })})`, Object.values(keys));
                 await db.commit();
                 result['code'] = 1;
                 result['obj']['message'] = '성공적으로 구매 되었습니다.';

@@ -4,7 +4,7 @@ const db = require('./config/db')
 const firebase = require("firebase-admin");
 const fcmNode = require("fcm-node");
 const serviceAccount = require("./config/privatekey_firebase.json");
-const { insertQuery } = require('./query-util');
+const { activeQuery } = require('./query-util');
 const crypto = require('crypto')
 const salt = "435f5ef2ffb83a632c843926b35ae7855bc2520021a73a043db41670bfaeb722"
 const saltRounds = 10
@@ -180,7 +180,7 @@ const logRequestResponse = async (req, res, decode) => {
     } else {
         user_pk = -1;
     }
-    let result = await insertQuery(
+    let result = await activeQuery(
         "INSERT INTO log_table (request, response_result, response_message, request_ip, user_id, user_pk) VALUES (?, ?, ?, ?, ?, ?)",
         [request, res?.result, res?.message, requestIp, user_id, user_pk]
     )
@@ -454,8 +454,8 @@ const initialDownPayment = async (contract) => {
         contract[`deposit`] > 0 &&
         contract[`monthly`] > 0
     ) {
-        let result = await insertQuery(`UPDATE contract_table SET is_confirm=1, confirm_date=? WHERE pk=?`, [returnMoment(), contract[`pk`]]);
-        let result2 = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        let result = await activeQuery(`UPDATE contract_table SET is_confirm=1, confirm_date=? WHERE pk=?`, [returnMoment(), contract[`pk`]]);
+        let result2 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 contract[`${getEnLevelByNum(0)}_pk`],
                 contract[`${getEnLevelByNum(5)}_pk`],
@@ -506,7 +506,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
             }
         }
         if (pay_list.length > 0) {
-            let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+            let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
         }
     }
 

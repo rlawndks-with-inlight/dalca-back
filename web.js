@@ -34,7 +34,7 @@ app.use(cookieParser());
 const schedule = require('node-schedule');
 
 const path = require('path');
-const { insertQuery } = require('./query-util')
+const { activeQuery } = require('./query-util')
 const {  sendAligoSms } = require('./routes/common')
 app.set('/routes', __dirname + '/routes');
 app.use('/config', express.static(__dirname + '/config'));
@@ -100,7 +100,7 @@ const scheduleSystem = () => {
 
                                         if (item_time >= time && item_time < overFiveTime) {
                                                 sendAlarm(list[i].title, list[i].note, "alarm", list[i].pk, list[i].url);
-                                                insertQuery("INSERT INTO alarm_log_table (title, note, item_table, item_pk, url) VALUES (?, ?, ?, ?, ?)", [list[i].title, list[i].note, "alarm", list[i].pk, list[i].url])
+                                                activeQuery("INSERT INTO alarm_log_table (title, note, item_table, item_pk, url) VALUES (?, ?, ?, ?, ?)", [list[i].title, list[i].note, "alarm", list[i].pk, list[i].url])
                                         }
                                 }
                         }
@@ -190,7 +190,7 @@ const scheduleSystem = () => {
                                 }
                                 //계약 1주일 후 남은 90프로 보증금 결제 추가
                                 if (insert_deposit_list.length > 0) {
-                                        //let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
+                                        //let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
                                 }
                                 //계약 만료 발송
                                 for (var i = 0; i < send_message_list.length; i++) {
@@ -198,7 +198,7 @@ const scheduleSystem = () => {
                                 }
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
-                                        let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+                                        let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
                                         let send_message = `${return_moment.substring(0, 10)} 일자 월세 납부 바랍니다.\n\n-달카페이-`;
                                         for(var i = 0;i<pay_list.length;i++){
                                                 let result2 = await sendAligoSms({ receivers: users_obj[pay_list[i][0]].phone, message: send_message })
@@ -270,7 +270,7 @@ app.get('/api/item', async (req, res) => {
 
                 await db.beginTransaction();
                 if (community_list.includes(table)) {
-                        let community_add_view = await insertQuery(`UPDATE ${table}_table SET views=views+1 WHERE pk=?`, [pk]);
+                        let community_add_view = await activeQuery(`UPDATE ${table}_table SET views=views+1 WHERE pk=?`, [pk]);
                 }
                 if (only_my_item.includes(table)) {
                         table = `v_${table}`;
