@@ -14,7 +14,7 @@ const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
     isNotNullOrUndefined, namingImagesPath, nullResponse,
     lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber,
     categoryToNumber, sendAlarm, makeMaxPage, queryPromise, makeHash, commarNumber, getKewordListBySchema,
-    getQuestions, initialPay
+    getQuestions, initialPay, initialDownPayment
 } = require('../util')
 const {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
@@ -1824,7 +1824,7 @@ const editContract = async (req, res) => {
             }
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${body['pk']}`);
             contract = contract?.result[0];
-            await initialPay(contract);
+            await initialDownPayment(contract);
         }
         await db.commit();
         return response(req, res, 100, "success", []);

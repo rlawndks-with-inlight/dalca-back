@@ -190,7 +190,7 @@ const scheduleSystem = () => {
                                 }
                                 //계약 1주일 후 남은 90프로 보증금 결제 추가
                                 if (insert_deposit_list.length > 0) {
-                                        let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
+                                        //let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
                                 }
                                 //계약 만료 발송
                                 for (var i = 0; i < send_message_list.length; i++) {

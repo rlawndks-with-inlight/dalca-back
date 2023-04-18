@@ -15,7 +15,7 @@ const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
     lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber,
     categoryToNumber, sendAlarm, makeMaxPage, queryPromise, makeHash, commarNumber, getKewordListBySchema,
     getEnLevelByNum, getKoLevelByNum,
-    getQuestions, getNumByEnLevel, initialPay
+    getQuestions, getNumByEnLevel, initialPay, initialDownPayment
 } = require('../util')
 const {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
@@ -208,7 +208,7 @@ const confirmContractAppr = async (req, res) => {
 
         let now_contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${contract_pk}`);
         now_contract = now_contract?.result[0];
-        await initialPay(now_contract);
+        await initialDownPayment(now_contract);
         await db.commit();
         return response(req, res, 100, "success", []);
     } catch (err) {
@@ -377,13 +377,30 @@ const onPayByDirect = async (req, res) => {
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
-            let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.point_percent)/100,
-                1,
-                pay?.pay_category,
-                pay[`${getEnLevelByNum(0)}_pk`],
-                item_pk
-            ])
+            if(pay?.pay_category==0){
+                let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                    parseInt(pay?.price)*(setting?.point_percent)/100,
+                    1,
+                    pay?.pay_category,
+                    pay[`${getEnLevelByNum(0)}_pk`],
+                    item_pk
+                ])
+            }
+            if(pay?.pay_category==2){
+                let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
+                contract = contract?.result[0];
+                let insert_deposit = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+                    pay[`${getEnLevelByNum(0)}_pk`],
+                    pay[`${getEnLevelByNum(5)}_pk`],
+                    pay[`${getEnLevelByNum(10)}_pk`],
+                    parseInt(pay?.price)*9,
+                    1,
+                    0,
+                    pay?.contract_pk,
+                    returnMoment().substring(0, 10)
+                ])
+                await initialPay(contract);
+            }
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -431,13 +448,30 @@ const onPayResult = async (req, res) => {
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
-            let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.point_percent)/100,
-                1,
-                pay?.pay_category,
-                pay[`${getEnLevelByNum(0)}_pk`],
-                pay_pk
-            ])
+            if(pay?.pay_category==0){
+                let insert_point = await insertQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
+                    parseInt(pay?.price)*(setting?.point_percent)/100,
+                    1,
+                    pay?.pay_category,
+                    pay[`${getEnLevelByNum(0)}_pk`],
+                    pay_pk
+                ])
+            }
+            if(pay?.pay_category==2){
+                let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
+                contract = contract?.result[0];
+                let insert_deposit = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+                    pay[`${getEnLevelByNum(0)}_pk`],
+                    pay[`${getEnLevelByNum(5)}_pk`],
+                    pay[`${getEnLevelByNum(10)}_pk`],
+                    parseInt(pay?.price)*9,
+                    1,
+                    0,
+                    pay?.contract_pk,
+                    returnMoment().substring(0, 10)
+                ])
+                await initialPay(contract);
+            }
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {

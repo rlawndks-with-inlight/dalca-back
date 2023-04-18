@@ -183,7 +183,7 @@ const logRequestResponse = async (req, res, decode) => {
     let result = await insertQuery(
         "INSERT INTO log_table (request, response_result, response_message, request_ip, user_id, user_pk) VALUES (?, ?, ?, ?, ?, ?)",
         [request, res?.result, res?.message, requestIp, user_id, user_pk]
-    ) 
+    )
 }
 
 const tooMuchRequest = (num) => {
@@ -447,10 +447,7 @@ const commarNumber = (num) => {
     }
     return result;
 }
-const initialPay = async (contract) => {
-    if (contract['is_confirm'] == 1) {
-        return;
-    }
+const initialDownPayment = async (contract) => {
     if (
         contract[`${getEnLevelByNum(0)}_appr`] == 1 &&
         contract[`${getEnLevelByNum(5)}_appr`] == 1 &&
@@ -463,59 +460,63 @@ const initialPay = async (contract) => {
                 contract[`${getEnLevelByNum(0)}_pk`],
                 contract[`${getEnLevelByNum(5)}_pk`],
                 contract[`${getEnLevelByNum(10)}_pk`],
-                parseInt(contract[`deposit`])/10,
+                parseInt(contract[`deposit`]) / 10,
                 2,
                 0,
                 contract[`pk`],
                 returnMoment().substring(0, 10)
             ])
-        let now = returnMoment().substring(0, 10);
-        if (now >= `${contract.start_date}`) {//월세 관련
-            let pay_list = [];
-            let contract_day = `${contract['pay_day'] >= 10 ? `${contract['pay_day']}` : `0${contract['pay_day']}`}`
-            let pay_date = contract.start_date.substring(0, 7) + `-${contract_day}`;
-            for (var i = 0; i < 100000; i++) {
-                //console.log(date_format)'
-                if (pay_date.includes('-12-')) {
-                    pay_date = pay_date.split('-');
-                    pay_date = `${(parseInt(pay_date[0]) + 1)}-01-${contract_day}`
-                } else {
-                    pay_date = pay_date.split('-');
-                    pay_date[1] = parseInt(pay_date[1]) + 1;
-                    pay_date[1] = `${pay_date[1] >= 10 ? pay_date[1] : `0${pay_date[1]}`}`
-                    pay_date = `${pay_date[0]}-${(pay_date[1])}-${contract_day}`
-                }
-                if (pay_date <= now && pay_date >= contract.start_date) {
-                    pay_list.push(
-                        [
-                            contract[`${getEnLevelByNum(0)}_pk`],
-                            contract[`${getEnLevelByNum(5)}_pk`],
-                            contract[`${getEnLevelByNum(10)}_pk`],
-                            contract[`monthly`],
-                            0,
-                            0,
-                            contract[`pk`],
-                            pay_date
-                        ]
-                    )
-                } else {
-                    if (pay_date > now) {
-                        break;
-                    }
-                }
+    }
+}
+const initialPay = async (contract) => { // 월세 내역 추가
+
+    let now = returnMoment().substring(0, 10);
+    if (now >= `${contract.start_date}`) {//월세 관련
+        let pay_list = [];
+        let contract_day = `${contract['pay_day'] >= 10 ? `${contract['pay_day']}` : `0${contract['pay_day']}`}`
+        let pay_date = contract.start_date.substring(0, 7) + `-${contract_day}`;
+        for (var i = 0; i < 100000; i++) {
+            //console.log(date_format)'
+            if (pay_date.includes('-12-')) {
+                pay_date = pay_date.split('-');
+                pay_date = `${(parseInt(pay_date[0]) + 1)}-01-${contract_day}`
+            } else {
+                pay_date = pay_date.split('-');
+                pay_date[1] = parseInt(pay_date[1]) + 1;
+                pay_date[1] = `${pay_date[1] >= 10 ? pay_date[1] : `0${pay_date[1]}`}`
+                pay_date = `${pay_date[0]}-${(pay_date[1])}-${contract_day}`
             }
-            if (pay_list.length > 0) {
-                let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+            if (pay_date <= now && pay_date >= contract.start_date || now.substring(0, 7) == pay_date.substring(0, 7)) {
+                pay_list.push(
+                    [
+                        contract[`${getEnLevelByNum(0)}_pk`],
+                        contract[`${getEnLevelByNum(5)}_pk`],
+                        contract[`${getEnLevelByNum(10)}_pk`],
+                        contract[`monthly`],
+                        0,
+                        0,
+                        contract[`pk`],
+                        pay_date
+                    ]
+                )
+            } else {
+                if (pay_date > now) {
+                    break;
+                }
             }
         }
+        if (pay_list.length > 0) {
+            let result = await insertQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+        }
     }
+
 }
 
 module.exports = {
     checkLevel, lowLevelException, nullRequestParamsOrBody,
     logRequestResponse, logResponse, logRequest,
     getUserPKArrStrWithNewPK, isNotNullOrUndefined,
-    namingImagesPath, getSQLnParams,
+    namingImagesPath, getSQLnParams, initialDownPayment,
     nullResponse, lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber, categoryToNumber, sendAlarm, makeMaxPage, tooMuchRequest,
     queryPromise, makeHash, commarNumber, getKewordListBySchema, getEnLevelByNum, getKoLevelByNum, getQuestions, getNumByEnLevel, initialPay
 }
