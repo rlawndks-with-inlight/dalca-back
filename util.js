@@ -486,7 +486,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
         }
     }
     result_day = `${return_moment_list[0]}-${return_moment_list[1]}-${return_moment_list[2]}`;
-    let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [
+    let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
         contract[`${getEnLevelByNum(0)}_pk`],
         contract[`${getEnLevelByNum(5)}_pk`],
         contract[`${getEnLevelByNum(10)}_pk`],
