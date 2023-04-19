@@ -728,7 +728,7 @@ const addFamilyCard = async (req, res) => {
         }
         let bill_key = create_bill_key?.data;
         let result = await activeQuery(`
-        INSERT INTO user_card_table (card_number,card_name,card_expire,card_cvc,card_password,birth,family_type,user_pk,card_src,phone,bill_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        INSERT INTO user_card_table (card_number,card_name,card_expire,card_cvc,card_password,birth,family_type,user_pk,card_src,phone,bill_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             card_number,
             card_name,
             card_expire,
