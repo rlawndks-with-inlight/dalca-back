@@ -35,7 +35,8 @@ const schedule = require('node-schedule');
 
 const path = require('path');
 const { activeQuery } = require('./query-util')
-const {  sendAligoSms } = require('./routes/common')
+const { sendAligoSms } = require('./routes/common')
+const { getMyAutoCardReturn } = require('./routes/user')
 app.set('/routes', __dirname + '/routes');
 app.use('/config', express.static(__dirname + '/config'));
 //app.use('/image', express.static('./upload'));
@@ -120,7 +121,6 @@ const scheduleSystem = () => {
                                 for (var i = 0; i < users.length; i++) {
                                         users_obj[users[i]?.pk] = users[i];
                                 }
-
                                 let send_message_list = [];
 
                                 let pay_obj = {};
@@ -133,9 +133,6 @@ const scheduleSystem = () => {
                                 for (var i = 0; i < contracts.length; i++) {
                                         let end_date = contracts[i]?.end_date;
                                         let distance_day = differenceTwoDate(end_date, return_moment.substring(0, 10));
-                                        console.log(distance_day)
-                                        console.log(contracts[i])
-                                        console.log(return_moment.substring(0, 10))
                                         if (distance_day <= dead_day && distance_day >= 1) {
                                                 if (users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]]) {
                                                         send_message_list.push({//임대인 푸시
@@ -158,18 +155,62 @@ const scheduleSystem = () => {
                                         }
 
                                         if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`] && contracts[i][`${getEnLevelByNum(0)}_appr`] == 1 && contracts[i][`${getEnLevelByNum(5)}_appr`] == 1) {
-                                                pay_list.push(
-                                                        [
-                                                                contracts[i][`${getEnLevelByNum(0)}_pk`],
-                                                                contracts[i][`${getEnLevelByNum(5)}_pk`],
-                                                                contracts[i][`${getEnLevelByNum(10)}_pk`],
-                                                                contracts[i][`monthly`],
-                                                                0,
+                                                let user = users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]];
+                                                let card = await getMyAutoCardReturn(user);
+                                                console.log(card)
+                                                user = { ...user, ...card };
+                                                let pay_one_list = [
+                                                        contracts[i][`${getEnLevelByNum(0)}_pk`],
+                                                        contracts[i][`${getEnLevelByNum(5)}_pk`],
+                                                        contracts[i][`${getEnLevelByNum(10)}_pk`],
+                                                        contracts[i][`monthly`],
+                                                        0,
+                                                ]
+                                                if (user['auto_card']?.card_number) {
+                                                        let resp = await onPay(user, pay_item);
+                                                        console.log(resp)
+                                                        if (resp?.ResultCode == '00') {
+                                                                let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
+                                                                let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
+                                                                pay_list.push([...pay_one_list, ...[
+                                                                        1,
+                                                                        contracts[i][`pk`],
+                                                                        return_moment.substring(0, 10),
+                                                                        1,
+                                                                        trade_date,
+                                                                        trade_day,
+                                                                        resp?.oid,
+                                                                        resp?.tid,
+                                                                        resp?.ApplNum,
+                                                                ]])
+                                                        } else {
+                                                                pay_list.push([...pay_one_list, ...[
+                                                                        0,
+                                                                        contracts[i][`pk`],
+                                                                        return_moment.substring(0, 10),
+                                                                        0,
+                                                                        '0000-00-00 00:00:99',
+                                                                        '0000-00-00',
+                                                                        '',
+                                                                        '',
+                                                                        '',
+                                                                ]])
+                                                        }
+
+                                                } else {
+                                                        pay_list.push([...pay_one_list, ...[
                                                                 0,
                                                                 contracts[i][`pk`],
-                                                                return_moment.substring(0, 10)
-                                                        ]
-                                                )
+                                                                return_moment.substring(0, 10),
+                                                                0,
+                                                                '0000-00-00 00:00:99',
+                                                                '0000-00-00',
+                                                                '',
+                                                                '',
+                                                                '',
+                                                        ]])
+                                                }
+
                                         }
                                 }
                                 let insert_deposit_list = [];
@@ -198,9 +239,9 @@ const scheduleSystem = () => {
                                 }
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
-                                        let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+                                        let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day, is_auto, trade_date, trade_day, order_num, transaction_num, approval_num) VALUES ?`, [pay_list]);
                                         let send_message = `${return_moment.substring(0, 10)} 일자 월세 납부 바랍니다.\n\n-달카페이-`;
-                                        for(var i = 0;i<pay_list.length;i++){
+                                        for (var i = 0; i < pay_list.length; i++) {
                                                 let result2 = await sendAligoSms({ receivers: users_obj[pay_list[i][0]].phone, message: send_message })
                                         }
                                 }

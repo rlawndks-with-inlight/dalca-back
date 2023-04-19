@@ -123,7 +123,7 @@ const getHomeContent = async (req, res) => {
             { table: 'contract', sql: `SELECT * FROM v_contract ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'point', sql: `${sqlJoinFormat('point').sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
-        ];  
+        ];
         for (var i = 0; i < sql_list.length; i++) {
             result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
         }
@@ -360,8 +360,8 @@ const onPayByDirect = async (req, res) => {
         if (pay_item?.status == 1) {
             return response(req, res, -150, "이미 결제 하였습니다.", []);
         }
-        let resp = await onPay(user, pay_item);
         await db.beginTransaction();
+        let resp = await onPay(user, pay_item);
         if (resp?.ResultCode == '00') {
             let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
             let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
@@ -373,32 +373,32 @@ const onPayByDirect = async (req, res) => {
                 resp?.ApplNum,
                 item_pk
             ])
-            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[item_pk]);
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
-            if(pay?.pay_category==0){
-                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                    parseInt(pay?.price)*(setting?.point_percent)/100,
+            if (pay?.pay_category == 0) {
+                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+                    parseInt(pay?.price) * (setting?.point_percent) / 100,
                     1,
                     pay?.pay_category,
                     pay[`${getEnLevelByNum(0)}_pk`],
                     item_pk
                 ])
-            }else if (pay?.pay_category==2){
-                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+            } else if (pay?.pay_category == 2) {
+                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
                     contract[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(contract?.deposit)*9,
+                    parseInt(contract?.deposit) * 9,
                     1,
                     0,
                     pay?.contract_pk,
                     returnMoment().substring(0, 10)
                 ])
-            }else if(pay?.pay_category==1){
+            } else if (pay?.pay_category == 1) {
                 let result = await activeQuery(`UPDATE contract_table SET is_deposit_com=1 WHERE pk=${pay?.contract_pk}`);
                 let result2 = await initialPay(contract);
             }
@@ -445,33 +445,33 @@ const onPayResult = async (req, res) => {
                 applNum,
                 pay_pk
             ])
-            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[pay_pk]);
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
-            if(pay?.pay_category==0){
-                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                    parseInt(pay?.price)*(setting?.point_percent)/100,
+            if (pay?.pay_category == 0) {
+                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+                    parseInt(pay?.price) * (setting?.point_percent) / 100,
                     1,
                     pay?.pay_category,
                     pay[`${getEnLevelByNum(0)}_pk`],
                     pay_pk
                 ])
-            }else if(pay?.pay_category==2){
-                
-                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
+            } else if (pay?.pay_category == 2) {
+
+                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
                     contract[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(contract?.deposit)*9/10,
+                    parseInt(contract?.deposit) * 9 / 10,
                     1,
                     0,
                     pay?.contract_pk,
                     returnMoment().substring(0, 10)
                 ])
-            }else if(pay?.pay_category==1){
+            } else if (pay?.pay_category == 1) {
                 let result = await activeQuery(`UPDATE contract_table SET is_deposit_com=1 WHERE pk=${pay?.contract_pk}`);
                 let result2 = await initialPay(contract);
             }
@@ -486,24 +486,24 @@ const onPayResult = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const onWantPayCancel = async (req, res) =>{// 취소요청
+const onWantPayCancel = async (req, res) => {// 취소요청
     try {
         const decode = checkLevel(req.cookies.token, 0);
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        const {pay_pk} = req.body;
+        const { pay_pk } = req.body;
         let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=${pay_pk}`);
         pay = pay?.result[0];
-        if(decode?.pk != pay[`${getEnLevelByNum(0)}_pk`]){
+        if (decode?.pk != pay[`${getEnLevelByNum(0)}_pk`]) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        if(pay?.is_want_cancel == -1 || pay?.is_want_cancel == 1){
+        if (pay?.is_want_cancel == -1 || pay?.is_want_cancel == 1) {
             return response(req, res, -150, "이미 취소요청을 보낸 결제입니다.", []);
         }
         let result = await activeQuery(`UPDATE pay_table SET is_want_cancel=1 WHERE pk=${pay_pk}`);
         return response(req, res, 100, "success", []);
-    }catch (err) {
+    } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }
@@ -552,7 +552,7 @@ const onPayCancelByDirect = async (req, res) => {
         }
         const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
         await db.beginTransaction();
-            
+
         if (resp?.ResultCode == '00') {
             let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
             let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
@@ -569,18 +569,18 @@ const onPayCancelByDirect = async (req, res) => {
                 cancel_day,
                 pay_item?.transaction_num
             ])
-            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`,[item_pk]);
+            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
-            let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
-                parseInt(pay?.price)*(setting?.point_percent)/100*(-1),
+            let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+                parseInt(pay?.price) * (setting?.point_percent) / 100 * (-1),
                 -1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
                 pay_pk
             ])
-            let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`,[item_pk]);
+            let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -728,22 +728,7 @@ const addFamilyCard = async (req, res) => {
         }
         let bill_key = create_bill_key?.data;
         let result = await activeQuery(`
-        INSERT INTO user_card_table (
-            card_number,
-            card_name,
-            card_expire,
-            card_cvc,
-            card_password,
-            birth,
-            family_type,
-            user_pk,
-            card_src,
-            phone,
-            bill_key
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
-        `, [
+        INSERT INTO user_card_table (card_number,card_name,card_expire,card_cvc,card_password,birth,family_type,user_pk,card_src,phone,bill_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             card_number,
             card_name,
             card_expire,
@@ -786,18 +771,7 @@ const updateFamilyCard = async (req, res) => {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
         let bill_key = create_bill_key?.data;
-        let result = await activeQuery(`UPDATE user_card_table SET 
-        card_number=?,
-        card_name=?,
-        card_expire=?,
-        card_cvc=?,
-        card_password=?,
-        birth=?,
-        family_type=?,
-        card_src=?,
-        phone=?,
-        bill_key=?
-        WHERE pk=?
+        let result = await activeQuery(`UPDATE user_card_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, family_type=?, card_src=?, phone=?, bill_key=? WHERE pk=?
         `, [
             card_number,
             card_name,
@@ -817,8 +791,77 @@ const updateFamilyCard = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const registerAutoCard = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        const { table, pk } = req.body;
+        let card = {};
+        if (table == 'user') {
+            card = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`, [decode?.pk]);
+            card = card?.result[0];
+        } else if (table == 'user_card') {
+            card = await dbQueryList(`SELECT * FROM user_card_table WHERE pk=?`, [pk]);
+            card = card?.result[0];
+        }
+        if (!card?.bill_key) {
+            return response(req, res, -100, "카드를 먼저 등록해 주세요.", []);
+        }
+        await db.beginTransaction();
+        let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [decode?.pk]);
+        let insert_auto_card = await activeQuery(`INSERT INTO auto_card_table (user_pk, item_pk) VALUES (?, ?)`, [
+            decode?.pk,
+            pk ?? 0
+        ])
+        await db.commit();
+        return response(req, res, 100, "success", []);
+    } catch (err) {
+        console.log(err)
+        await db.rollback();
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const getMyAutoCard = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        let result = await getMyAutoCardReturn(decode);
+        return response(req, res, 100, "success", result);
+    } catch (err) {
+        console.log(err)
+        await db.rollback();
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
+    let card_pk = await dbQueryList(`SELECT * FROM auto_card_table WHERE user_pk=?`, [decode?.pk]);
+    card_pk = card_pk?.result[0];
+    let card = {};
+    let pk = 0;
+    if (card_pk?.item_pk > 0) {
+        card = await dbQueryList(`SELECT * FROM user_card_table WHERE pk=?`, [card_pk?.item_pk]);
+        card = card?.result[0];
+        pk = card?.pk;
+    } else {
+        card = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`, [decode?.pk]);
+        card = card?.result[0];
+    }
+    let result = {
+        card_number: card?.card_number,
+        card_name: card?.card_name,
+        card_expire: card?.card_expire,
+        card_cvc: card?.card_cvc,
+        card_password: card?.card_password,
+        pk: pk
+    }
+    return result;
+}
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
-    addFamilyCard, updateFamilyCard
+    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn
 };
