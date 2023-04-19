@@ -110,7 +110,7 @@ const scheduleSystem = () => {
                                 let return_moment_list = return_moment.substring(0, 10).split('-');
                                 let pay_day = parseInt(return_moment_list[2]);
 
-                                let contracts = await dbQueryList(`SELECT * FROM v_contract WHERE end_date >= '${return_moment.substring(0, 10)}'`);
+                                let contracts = await dbQueryList(`SELECT * FROM v_contract WHERE end_date >= '${return_moment.substring(0, 10)}' AND is_deposit_com=1`);
                                 contracts = contracts?.result;
                                 let pays = await dbQueryList(`SELECT contract_pk, MAX(day) as max_day FROM v_pay WHERE pay_category=0 group by contract_pk`);
                                 pays = pays?.result;

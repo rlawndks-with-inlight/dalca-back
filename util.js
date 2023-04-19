@@ -447,7 +447,7 @@ const commarNumber = (num) => {
     }
     return result;
 }
-const initialDownPayment = async (contract) => {
+const initialDownPayment = async (contract) => {//계약금 내역 추가
     if (
         contract[`${getEnLevelByNum(0)}_appr`] == 1 &&
         contract[`${getEnLevelByNum(5)}_appr`] == 1 &&
@@ -469,47 +469,33 @@ const initialDownPayment = async (contract) => {
     }
 }
 const initialPay = async (contract) => { // 월세 내역 추가
-
-    let now = returnMoment().substring(0, 10);
-    if (now.substring(0, 7) >= `${contract.start_date.substring(0, 7)}`) {//월세 관련
-        let pay_list = [];
-        let contract_day = `${contract['pay_day'] >= 10 ? `${contract['pay_day']}` : `0${contract['pay_day']}`}`
-        let pay_date = contract.start_date.substring(0, 7) + `-${contract_day}`;
-        for (var i = 0; i < 100000; i++) {
-            //console.log(date_format)'
-            if (pay_date.includes('-12-')) {
-                pay_date = pay_date.split('-');
-                pay_date = `${(parseInt(pay_date[0]) + 1)}-01-${contract_day}`
-            } else {
-                pay_date = pay_date.split('-');
-                pay_date[1] = parseInt(pay_date[1]) + 1;
-                pay_date[1] = `${pay_date[1] >= 10 ? pay_date[1] : `0${pay_date[1]}`}`
-                pay_date = `${pay_date[0]}-${(pay_date[1])}-${contract_day}`
-            }
-            if (pay_date.substring(0, 7) <= now.substring(0, 7)) {
-                pay_list.push(
-                    [
-                        contract[`${getEnLevelByNum(0)}_pk`],
-                        contract[`${getEnLevelByNum(5)}_pk`],
-                        contract[`${getEnLevelByNum(10)}_pk`],
-                        contract[`monthly`],
-                        0,
-                        0,
-                        contract[`pk`],
-                        pay_date
-                    ]
-                )
-            } else {
-                if (pay_date > now) {
-                    break;
-                }
-            }
-        }
-        if (pay_list.length > 0) {
-            let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [pay_list]);
+    let return_moment = returnMoment().substring(0, 10);
+    let return_moment_list = return_moment.split('-');
+    let pay_day = `${contract['pay_day'] >= 10 ? `${contract['pay_day']}` : `0${contract['pay_day']}`}`;//몇일
+    let result_day = "";
+    if (return_moment_list[2] <= pay_day) {
+        return_moment_list[2] = pay_day;
+    } else {
+        if (return_moment_list[1] == '12') {
+            return_moment_list[0] = parseInt(return_moment_list[0]) + 1;
+            return_moment_list[1] = '01';
+        } else {
+            return_moment_list[1] = parseInt(return_moment_list[1]) + 1;
+            return_moment_list[1] = `${return_moment_list[1] >= 10 ? `${return_moment_list[1]}` : `0${return_moment_list[1]}`}`;
+            return_moment_list[2] = pay_day;
         }
     }
-
+    result_day = `${return_moment_list[0]}-${return_moment_list[1]}-${return_moment_list[2]}`;
+    let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [
+        contract[`${getEnLevelByNum(0)}_pk`],
+        contract[`${getEnLevelByNum(5)}_pk`],
+        contract[`${getEnLevelByNum(10)}_pk`],
+        contract[`monthly`],
+        0,
+        0,
+        contract[`pk`],
+        result_day
+    ]);
 }
 
 module.exports = {
