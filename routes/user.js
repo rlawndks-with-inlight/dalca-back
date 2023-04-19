@@ -721,6 +721,12 @@ const addFamilyCard = async (req, res) => {
             card_src,
             phone
         } = req.body;
+
+        let create_bill_key = await createBillKey(decode, req.body)
+        if (create_bill_key?.result < 0) {
+            return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
+        }
+        let bill_key = create_bill_key?.data;
         let result = await activeQuery(`
         INSERT INTO user_card_table (
             card_number,
@@ -732,7 +738,8 @@ const addFamilyCard = async (req, res) => {
             family_type,
             user_pk,
             card_src,
-            phone
+            phone,
+            bill_key
         ) VALUES (
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
@@ -747,7 +754,9 @@ const addFamilyCard = async (req, res) => {
             decode?.pk,
             card_src,
             phone,
+            bill_key
         ])
+
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
@@ -772,6 +781,11 @@ const updateFamilyCard = async (req, res) => {
             phone,
             pk
         } = req.body;
+        let create_bill_key = await createBillKey(decode, req.body)
+        if (create_bill_key?.result < 0) {
+            return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
+        }
+        let bill_key = create_bill_key?.data;
         let result = await activeQuery(`UPDATE user_card_table SET 
         card_number=?,
         card_name=?,
@@ -781,7 +795,8 @@ const updateFamilyCard = async (req, res) => {
         birth=?,
         family_type=?,
         card_src=?,
-        phone=?
+        phone=?,
+        bill_key=?
         WHERE pk=?
         `, [
             card_number,
@@ -793,6 +808,7 @@ const updateFamilyCard = async (req, res) => {
             family_type,
             card_src,
             phone,
+            bill_key,
             pk
         ])
         return response(req, res, 100, "success", []);
