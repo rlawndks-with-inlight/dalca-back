@@ -486,7 +486,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
                 pay_date[1] = `${pay_date[1] >= 10 ? pay_date[1] : `0${pay_date[1]}`}`
                 pay_date = `${pay_date[0]}-${(pay_date[1])}-${contract_day}`
             }
-            if (pay_date <= now && pay_date >= contract.start_date || now.substring(0, 7) == pay_date.substring(0, 7)) {
+            if ((pay_date <= now && pay_date >= contract.start_date) || now.substring(0, 7) == pay_date.substring(0, 7)) {
                 pay_list.push(
                     [
                         contract[`${getEnLevelByNum(0)}_pk`],
