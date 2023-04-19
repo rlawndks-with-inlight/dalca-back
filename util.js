@@ -471,7 +471,7 @@ const initialDownPayment = async (contract) => {
 const initialPay = async (contract) => { // 월세 내역 추가
 
     let now = returnMoment().substring(0, 10);
-    if (now >= `${contract.start_date}`) {//월세 관련
+    if (now.substring(0, 7) >= `${contract.start_date.substring(0, 7)}`) {//월세 관련
         let pay_list = [];
         let contract_day = `${contract['pay_day'] >= 10 ? `${contract['pay_day']}` : `0${contract['pay_day']}`}`
         let pay_date = contract.start_date.substring(0, 7) + `-${contract_day}`;
@@ -486,7 +486,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
                 pay_date[1] = `${pay_date[1] >= 10 ? pay_date[1] : `0${pay_date[1]}`}`
                 pay_date = `${pay_date[0]}-${(pay_date[1])}-${contract_day}`
             }
-            if ((pay_date <= now && pay_date >= contract.start_date) || now.substring(0, 7) == pay_date.substring(0, 7)) {
+            if (pay_date.substring(0, 7) <= now.substring(0, 7)) {
                 pay_list.push(
                     [
                         contract[`${getEnLevelByNum(0)}_pk`],

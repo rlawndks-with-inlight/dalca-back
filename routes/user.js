@@ -390,10 +390,10 @@ const onPayByDirect = async (req, res) => {
                 let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
                 contract = contract?.result[0];
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
-                    pay[`${getEnLevelByNum(0)}_pk`],
-                    pay[`${getEnLevelByNum(5)}_pk`],
-                    pay[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(pay?.price)*9,
+                    contract[`${getEnLevelByNum(0)}_pk`],
+                    contract[`${getEnLevelByNum(5)}_pk`],
+                    contract[`${getEnLevelByNum(10)}_pk`],
+                    parseInt(contract?.deposit)*9,
                     1,
                     0,
                     pay?.contract_pk,
