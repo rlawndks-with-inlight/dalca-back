@@ -449,6 +449,8 @@ const onPayResult = async (req, res) => {
             pay = pay?.result[0];
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
+            let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
+            contract = contract?.result[0];
             if(pay?.pay_category==0){
                 let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`,[
                     parseInt(pay?.price)*(setting?.point_percent)/100,
@@ -458,8 +460,7 @@ const onPayResult = async (req, res) => {
                     pay_pk
                 ])
             }else if(pay?.pay_category==2){
-                let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
-                contract = contract?.result[0];
+                
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,[
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
