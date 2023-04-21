@@ -486,7 +486,28 @@ const initialPay = async (contract) => { // 월세 내역 추가
         }
     }
     result_day = `${return_moment_list[0]}-${return_moment_list[1]}-${return_moment_list[2]}`;
-    let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+   
+    let result_brokerage_fee_1 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+        contract[`${getEnLevelByNum(5)}_pk`],
+        contract[`${getEnLevelByNum(5)}_pk`],
+        contract[`${getEnLevelByNum(10)}_pk`],
+        brokerageFee(contract[`deposit`],contract[`monthly`]),
+        3,
+        0,
+        contract[`pk`],
+        result_day
+    ]);
+    let result_brokerage_fee_2 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+        contract[`${getEnLevelByNum(0)}_pk`],
+        contract[`${getEnLevelByNum(5)}_pk`],
+        contract[`${getEnLevelByNum(10)}_pk`],
+        brokerageFee(contract[`deposit`],contract[`monthly`]),
+        3,
+        0,
+        contract[`pk`],
+        result_day
+    ]);
+    let result_monthly = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
         contract[`${getEnLevelByNum(0)}_pk`],
         contract[`${getEnLevelByNum(5)}_pk`],
         contract[`${getEnLevelByNum(10)}_pk`],
@@ -497,12 +518,24 @@ const initialPay = async (contract) => { // 월세 내역 추가
         result_day
     ]);
 }
-
+const brokerageFee = (deposit, monthly) => {
+    let result = deposit + monthly * 70;
+    if (result >= 600000000) {
+        result = result / 1000 * 4;
+    } else if (result >= 100000000) {
+        result = result / 1000 * 3;
+    } else if (result >= 50000000) {
+        result = result / 1000 * 4;
+    } else if (result >= 0) {
+        result = result / 1000 * 5;
+    }
+    return result;
+}
 module.exports = {
     checkLevel, lowLevelException, nullRequestParamsOrBody,
     logRequestResponse, logResponse, logRequest,
     getUserPKArrStrWithNewPK, isNotNullOrUndefined,
     namingImagesPath, getSQLnParams, initialDownPayment,
     nullResponse, lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber, categoryToNumber, sendAlarm, makeMaxPage, tooMuchRequest,
-    queryPromise, makeHash, commarNumber, getKewordListBySchema, getEnLevelByNum, getKoLevelByNum, getQuestions, getNumByEnLevel, initialPay
+    queryPromise, makeHash, commarNumber, getKewordListBySchema, getEnLevelByNum, getKoLevelByNum, getQuestions, getNumByEnLevel, initialPay, brokerageFee
 }
