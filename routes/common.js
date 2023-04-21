@@ -139,6 +139,7 @@ const onSignUp = async (req, res) => {
             office_name,
             company_number,
             office_address,
+            office_address_detail,
             office_zip_code,
             office_lng,
             office_lat,
@@ -186,6 +187,7 @@ const onSignUp = async (req, res) => {
             office_name,
             company_number,
             office_address,
+            office_address_detail,
             office_zip_code,
             office_lng,
             office_lat,
@@ -830,12 +832,13 @@ const updateUser = async (req, res) => {
         const office_name = req.body.office_name ?? "";
         const company_number = req.body.company_number ?? "";
         const office_address = req.body.office_address ?? "";
+        const office_address_detail = req.body.office_address_detail ?? "";
         const office_phone = req.body.office_phone ?? "";
         const company_number_src = req.body.company_number_src ?? "";
         const office_src = req.body.office_src ?? "";
         const bank_book_src = req.body.bank_book_src ?? "";
         const id_number_src = req.body.id_number_src ?? "";
-
+        console.log(req.body)
         const pk = req.body.pk ?? 0;
         let body = {
             id,
@@ -849,6 +852,7 @@ const updateUser = async (req, res) => {
             office_name,
             company_number,
             office_address,
+            office_address_detail,
             office_phone,
             company_number_src,
             office_src,
@@ -2050,7 +2054,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 result_obj['user'][i]['phone'] = result_obj['user'][i]['office_phone'];
                 result_obj['user'][i]['address'] = result_obj['user'][i]['office_address'];
                 result_obj['user'][i]['zip_code'] = result_obj['user'][i]['office_zip_code'];
-                result_obj['user'][i]['address_detail'] = '---';
+                result_obj['user'][i]['address_detail'] = result_obj['user'][i]['office_address_detail'];
                 result_obj['user'][i]['lat'] = result_obj['user'][i]['office_lat'];
                 result_obj['user'][i]['lng'] = result_obj['user'][i]['office_lng'];
                 result_obj['user'][i]['table'] = 'user';
