@@ -64,9 +64,9 @@ const addContract = async (req, res) => {
         if (is_user && decode?.user_level != 10) {
             return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
         }
-        const { deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
-        let result = await activeQuery('INSERT INTO contract_table ( deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [deposit, monthly, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
+        const { deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
+        let result = await activeQuery('INSERT INTO contract_table ( deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [deposit, monthly,brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
         return response(req, res, 100, "success", {
             result_pk: result?.result?.insertId
         });
@@ -83,11 +83,10 @@ const updateContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { deposit, monthly, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
-        console.log(req.body)
+        const { deposit, monthly,brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
 
-        let value_str = "deposit=?, monthly=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
-        let value_list = [deposit, monthly, address, address_detail, zip_code, start_date, pay_day, pdf_list];
+        let value_str = "deposit=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
+        let value_list = [deposit, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pdf_list];
         if (document_src) {
             if (document_src == -1) {
                 value_list.push('')
@@ -796,10 +795,14 @@ const registerAutoCard = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { table, pk } = req.body;
+        const { table, pk, user_pk } = req.body;
+        let user_pk_ = decode?.pk
+        if(user_pk && decode?.user_level >= 40){
+            user_pk_ = user_pk;
+        }
         let card = {};
         if (table == 'user') {
-            card = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`, [decode?.pk]);
+            card = await dbQueryList(`SELECT * FROM user_table WHERE pk=?`, [user_pk_]);
             card = card?.result[0];
         } else if (table == 'user_card') {
             card = await dbQueryList(`SELECT * FROM user_card_table WHERE pk=?`, [pk]);
@@ -809,9 +812,9 @@ const registerAutoCard = async (req, res) => {
             return response(req, res, -100, "카드를 먼저 등록해 주세요.", []);
         }
         await db.beginTransaction();
-        let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [decode?.pk]);
+        let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
         let insert_auto_card = await activeQuery(`INSERT INTO auto_card_table (user_pk, item_pk) VALUES (?, ?)`, [
-            decode?.pk,
+            user_pk_,
             pk ?? 0
         ])
         await db.commit();
@@ -828,7 +831,13 @@ const getMyAutoCard = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        let result = await getMyAutoCardReturn(decode);
+        const {user_pk} = req.query;
+        let user = decode;
+        if(user_pk && decode?.user_level>=40){
+            user = await dbQueryList(`SELECT * FROM user_table WHERE pk=${user_pk}`);
+            user = user?.result[0];
+        }
+        let result = await getMyAutoCardReturn(user);
         return response(req, res, 100, "success", result);
     } catch (err) {
         console.log(err)

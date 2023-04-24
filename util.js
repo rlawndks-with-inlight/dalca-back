@@ -113,7 +113,6 @@ const queryPromise = (table, sql, type) => {
     return new Promise(async (resolve, reject) => {
         await db.query(sql, (err, result, fields) => {
             if (err) {
-                console.log(sql)
                 console.log(err)
                 reject({
                     code: -200,
@@ -491,7 +490,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
         contract[`${getEnLevelByNum(5)}_pk`],
         contract[`${getEnLevelByNum(5)}_pk`],
         contract[`${getEnLevelByNum(10)}_pk`],
-        brokerageFee(contract[`deposit`],contract[`monthly`]),
+        contract[`brokerage_fee`],
         3,
         0,
         contract[`pk`],
@@ -501,7 +500,7 @@ const initialPay = async (contract) => { // 월세 내역 추가
         contract[`${getEnLevelByNum(0)}_pk`],
         contract[`${getEnLevelByNum(5)}_pk`],
         contract[`${getEnLevelByNum(10)}_pk`],
-        brokerageFee(contract[`deposit`],contract[`monthly`]),
+        contract[`brokerage_fee`],
         3,
         0,
         contract[`pk`],

@@ -1708,7 +1708,6 @@ const getItems = async (req, res) => {
         whereStr = await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
-        console.log(sql)
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }
@@ -1759,6 +1758,7 @@ const editContract = async (req, res) => {
             is_auto_pay,
             deposit,
             monthly,
+            brokerage_fee,
             start_date,
             end_date,
             pay_day,
@@ -1776,6 +1776,7 @@ const editContract = async (req, res) => {
             is_auto_pay,
             deposit,
             monthly,
+            brokerage_fee,
             start_date,
             end_date,
             pay_day,
@@ -1813,6 +1814,7 @@ const editContract = async (req, res) => {
         for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]]);
         }
+        
         if (edit_category == 'add') {
             let questions = [];
             for (var i = 0; i < keys.length; i++) {
@@ -2068,8 +2070,8 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
             let list = [...result_obj['user'], ...result_obj['real_estate']];
             page_result = [{ 'COUNT(*)': list.length }];
             list = list.sort((a, b) => {
-                if (a.date > b.date) return 1;
-                if (a.date < b.date) return -1;
+                if (a.date > b.date) return -1;
+                if (a.date < b.date) return 1;
                 return 0;
             });
             if (page) {

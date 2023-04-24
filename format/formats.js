@@ -51,6 +51,14 @@ const listFormatBySchema = (schema, data_, body_) => {
                 }
             }
         }
+    }else if(schema == 'user'){
+        for(var i=0;i<data.length;i++){
+            if(data[i]?.user_level==10){
+                data[i]['address'] = data[i]['office_address'];
+                data[i]['zip_code'] = data[i]['office_zip_code'];
+                data[i]['address_detail'] = data[i]['office_address_detail'];
+            }
+        }
     }
     
     if(schema)
