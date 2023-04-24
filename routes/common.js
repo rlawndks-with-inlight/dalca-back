@@ -2018,7 +2018,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
             let where_str_user = ""
             let real_keyword_columns = getKewordListBySchema('real_estate');
             let where_str_real = ""
-
+           
             if (keyword) {
                 if (user_keyword_columns?.length > 0) {
                     where_str_user += " AND (";
@@ -2039,7 +2039,6 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 { table: 'user', sql: `SELECT * FROM user_table WHERE user_level=10 ${where_str_user} ORDER BY pk DESC`, type: 'list' },
                 { table: 'real_estate', sql: `SELECT * FROM real_estate_table ${where_str_real} ORDER BY pk DESC`, type: 'list' },
             ];
-            
             for (var i = 0; i < sql_list.length; i++) {
                 result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
             }
@@ -2068,6 +2067,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 result_obj['user'][i]['table'] = 'user';
             }
             let list = [...result_obj['user'], ...result_obj['real_estate']];
+
             page_result = [{ 'COUNT(*)': list.length }];
             list = list.sort((a, b) => {
                 if (a.date > b.date) return -1;
