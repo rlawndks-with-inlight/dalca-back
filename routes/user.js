@@ -66,7 +66,7 @@ const addContract = async (req, res) => {
         }
         const { deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
         let result = await activeQuery('INSERT INTO contract_table ( deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [deposit, monthly,brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
+            [deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
         return response(req, res, 100, "success", {
             result_pk: result?.result?.insertId
         });
@@ -83,7 +83,7 @@ const updateContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { deposit, monthly,brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
+        const { deposit, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
 
         let value_str = "deposit=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
         let value_list = [deposit, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pdf_list];
@@ -116,12 +116,13 @@ const getHomeContent = async (req, res) => {
         if (user_level_list.includes(decode?.user_level)) {
             user_where_sql = `WHERE ${getEnLevelByNum(decode?.user_level)}_pk=${decode?.pk}  `;
         }
+        let landlord_sql = `AND ((pay_category=3 AND lessee_pk=${decode?.pk}) OR pay_category < 3)`
         let sql_list = [
             { table: 'notice', sql: 'SELECT notice_table.*, user_table.nickname FROM notice_table LEFT JOIN user_table ON notice_table.user_pk=user_table.pk WHERE notice_table.status=1 ORDER BY notice_table.sort DESC LIMIT 2', type: 'list' },
             { table: 'setting', sql: 'SELECT * FROM setting_table', type: 'obj' },
             { table: 'contract', sql: `SELECT * FROM v_contract ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'point', sql: `${sqlJoinFormat('point').sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
-            { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} AND ((pay_category=3 AND lessee_pk=${decode?.pk}) OR pay_category < 3) ORDER BY pk DESC LIMIT 5`, type: 'list' },
+            { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} ${decode?.user_level == 5 ? landlord_sql : ''} ORDER BY pk DESC LIMIT 5`, type: 'list' },
         ];
         for (var i = 0; i < sql_list.length; i++) {
             result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
@@ -797,7 +798,7 @@ const registerAutoCard = async (req, res) => {
         }
         const { table, pk, user_pk } = req.body;
         let user_pk_ = decode?.pk
-        if(user_pk && decode?.user_level >= 40){
+        if (user_pk && decode?.user_level >= 40) {
             user_pk_ = user_pk;
         }
         let card = {};
@@ -831,9 +832,9 @@ const getMyAutoCard = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const {user_pk} = req.query;
+        const { user_pk } = req.query;
         let user = decode;
-        if(user_pk && decode?.user_level>=40){
+        if (user_pk && decode?.user_level >= 40) {
             user = await dbQueryList(`SELECT * FROM user_table WHERE pk=${user_pk}`);
             user = user?.result[0];
         }
