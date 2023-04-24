@@ -1633,6 +1633,7 @@ const getItems = async (req, res) => {
             is_contract,
             pay_category,
             is_auto,
+            is_landlord,
             lng,
             lat
         } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
@@ -1674,9 +1675,11 @@ const getItems = async (req, res) => {
         if (is_auto) {
             whereStr += ` AND ${table_name}.is_auto=${is_auto} `;
         }
-          
         if (price_is_minus) {
             whereStr += ` AND ${table_name}.transaction_status ${price_is_minus == 1 ? ' = -1 ' : ' = 0 '} `;
+        }
+        if(is_landlord){
+            whereStr += `AND ((pay_category=3 AND lessee_pk=${decode?.pk}) OR pay_category < 3)`
         }
         if (is_contract) {
             if (is_contract == 1) {
