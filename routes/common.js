@@ -1632,6 +1632,7 @@ const getItems = async (req, res) => {
             contract_pk,
             is_contract,
             pay_category,
+            is_auto,
             lng,
             lat
         } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
@@ -1670,6 +1671,10 @@ const getItems = async (req, res) => {
         if (pay_category) {
             whereStr += ` AND ${table_name}.pay_category=${pay_category} `;
         }
+        if (is_auto) {
+            whereStr += ` AND ${table_name}.is_auto=${is_auto} `;
+        }
+          
         if (price_is_minus) {
             whereStr += ` AND ${table_name}.transaction_status ${price_is_minus == 1 ? ' = -1 ' : ' = 0 '} `;
         }
@@ -1703,6 +1708,7 @@ const getItems = async (req, res) => {
         whereStr = await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
+        console.log(sql)
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }
@@ -2134,7 +2140,6 @@ const getAddressByText = async (req, res) => {
         let client_id = 'p8k25t57ye';
         let client_secret = 'Nuqyt0Sj901zfBXVdFcXFdK6Fhzbsu2JFOVjXkW3';
         let api_url = 'https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode'; // json
-        console.log(text)
         if (!text) {
             return response(req, res, -100, "주소명을 입력 후 검색 버튼을 눌러주세요.", []);
         }

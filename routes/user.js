@@ -460,7 +460,6 @@ const onPayResult = async (req, res) => {
                     pay_pk
                 ])
             } else if (pay?.pay_category == 2) {
-
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
