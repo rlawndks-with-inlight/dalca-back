@@ -833,12 +833,14 @@ const updateUser = async (req, res) => {
         const company_number = req.body.company_number ?? "";
         const office_address = req.body.office_address ?? "";
         const office_address_detail = req.body.office_address_detail ?? "";
+        const office_zip_code = req.body.office_zip_code ?? "";
+        const office_lat = req.body.office_lat ?? "";
+        const office_lng = req.body.office_lng ?? "";
         const office_phone = req.body.office_phone ?? "";
         const company_number_src = req.body.company_number_src ?? "";
         const office_src = req.body.office_src ?? "";
         const bank_book_src = req.body.bank_book_src ?? "";
         const id_number_src = req.body.id_number_src ?? "";
-        console.log(req.body)
         const pk = req.body.pk ?? 0;
         let body = {
             id,
@@ -853,6 +855,9 @@ const updateUser = async (req, res) => {
             company_number,
             office_address,
             office_address_detail,
+            office_zip_code,
+            office_lat,
+            office_lng,
             office_phone,
             company_number_src,
             office_src,
@@ -1637,6 +1642,7 @@ const getItems = async (req, res) => {
             lng,
             lat
         } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
+        let body = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined)
         let table_name = getTableName(table);
         let sql = `SELECT * FROM ${table_name} `;
         let pageSql = `SELECT COUNT(*) FROM ${table_name} `;
@@ -1716,7 +1722,7 @@ const getItems = async (req, res) => {
         }
         if (page) {
             sql += ` LIMIT ${(page - 1) * page_cut}, ${page_cut}`;
-            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body, decode);
+            let get_result = await getItemsReturnBySchema(sql, pageSql, table, body, decode);
             let page_result = get_result?.page_result;
             let result = get_result?.result;
 
@@ -1733,7 +1739,7 @@ const getItems = async (req, res) => {
             }
             return response(req, res, 100, "success", { data: result, maxPage: maxPage, option_obj: option_obj });
         } else {
-            let get_result = await getItemsReturnBySchema(sql, pageSql, table, req?.body, decode);
+            let get_result = await getItemsReturnBySchema(sql, pageSql, table, body, decode);
             let result = get_result?.result;
             result = await listFormatBySchema(table, result);
             return response(req, res, 100, "success", result);
@@ -1913,8 +1919,8 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
     let another_get_item_schema = ['user_statistics', 'real_estate'];
     let page_result = [{ 'COUNT(*)': 0 }];
     let result = [];
-    let { statistics_type, statistics_year, statistics_month, page_cut, page, keyword } = body;
-    if (another_get_item_schema.includes(schema) && decode?.user_level >= 40) {
+    let { statistics_type, statistics_year, statistics_month, page_cut, page, keyword, status } = body;
+    if (another_get_item_schema.includes(schema)) {
         if (schema == 'user_statistics') {
             statistics_month = statistics_month ?? 1;
             statistics_type = statistics_type ?? 'month';
@@ -2018,9 +2024,9 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
         if (schema == 'real_estate') {
             let result_list = [];
             let user_keyword_columns = getKewordListBySchema('user');
-            let where_str_user = ""
+            let where_str_user = ' WHERE 1=1 '
             let real_keyword_columns = getKewordListBySchema('real_estate');
-            let where_str_real = ""
+            let where_str_real = " WHERE 1=1 "
            
             if (keyword) {
                 if (user_keyword_columns?.length > 0) {
@@ -2031,15 +2037,19 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                     where_str_user += ")";
                 }
                 if (real_keyword_columns?.length > 0) {
-                    where_str_real += " WHERE (";
+                    where_str_real += " AND (";
                     for (var i = 0; i < real_keyword_columns.length; i++) {
                         where_str_real += ` ${i != 0 ? 'OR' : ''} ${real_keyword_columns[i]} LIKE '%${keyword}%' `;
                     }
                     where_str_real += ")";
                 }
             }
+            if(body.status){
+                where_str_user += ` AND status=${body.status} `
+                where_str_real += ` AND status=${body.status} `
+            }
             let sql_list = [
-                { table: 'user', sql: `SELECT * FROM user_table WHERE user_level=10 ${where_str_user} ORDER BY pk DESC`, type: 'list' },
+                { table: 'user', sql: `SELECT * FROM user_table  ${where_str_user} AND user_level=10 ORDER BY pk DESC`, type: 'list' },
                 { table: 'real_estate', sql: `SELECT * FROM real_estate_table ${where_str_real} ORDER BY pk DESC`, type: 'list' },
             ];
             for (var i = 0; i < sql_list.length; i++) {
