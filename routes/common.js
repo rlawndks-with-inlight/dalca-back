@@ -842,7 +842,7 @@ const updateUser = async (req, res) => {
         const bank_book_src = req.body.bank_book_src ?? "";
         const id_number_src = req.body.id_number_src ?? "";
         const pk = req.body.pk ?? 0;
-        let body = {
+        let body_ = {
             id,
             name,
             phone,
@@ -864,12 +864,23 @@ const updateUser = async (req, res) => {
             bank_book_src,
             id_number_src,
         }
+        let body = {...body_};
         if (pw) {
             pw = await makeHash(pw);
             pw = pw?.data;
             body['pw'] = pw;
         }
         let keys = Object.keys(body);
+        for(var i = 0;i<keys.length;i++){
+            let key = keys[i];
+            console.log(key)
+            console.log(!body[`${key}`])
+            if(!body[`${key}`]){
+                delete body[`${key}`];
+            }
+        }
+
+        keys = Object.keys(body);
         let values = [];
         for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]])
