@@ -302,7 +302,7 @@ app.get('/api/item', async (req, res) => {
                 let table = req.query.table ?? "user";
                 //console.log(table)
                 const pk = req.query.pk ?? 0;
-                const community_list = ['faq', 'notice'];
+                const community_list = ['faq', 'notice', 'guide'];
                 const only_my_item = ['pay', 'contract'];
                 const decode = checkLevel(req.cookies.token, 0)
                 if (!decode) {
