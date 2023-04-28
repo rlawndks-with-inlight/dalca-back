@@ -1650,6 +1650,7 @@ const getItems = async (req, res) => {
             pay_category,
             is_auto,
             is_landlord,
+            pay_user_pk,
             lng,
             lat
         } = (req.query.table ? { ...req.query } : undefined) || (req.body.table ? { ...req.body } : undefined);
@@ -1676,6 +1677,9 @@ const getItems = async (req, res) => {
         }
         if (user_pk) {
             whereStr += ` AND ${table_name}.user_pk=${user_pk} `;
+        }
+        if(pay_user_pk){
+            whereStr += ` AND (${table_name}.lessee_pk=${pay_user_pk} OR ${table_name}.landlord_pk=${pay_user_pk} OR ${table_name}.realtor_pk=${pay_user_pk}) `;
         }
         if (master_pk) {
             whereStr += ` AND ${table_name}.master_pk=${master_pk} `;
@@ -1728,6 +1732,8 @@ const getItems = async (req, res) => {
         whereStr = await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
+
+        console.log(sql)
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }

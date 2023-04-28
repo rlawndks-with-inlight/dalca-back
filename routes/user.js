@@ -365,18 +365,20 @@ const onPayByDirect = async (req, res) => {
         if (resp?.ResultCode == '00') {
             let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
             let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
-            let update_pay = await activeQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=? WHERE pk=?`, [
+            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+            setting = setting?.result[0];
+            let update_pay = await activeQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, card_percent=? WHERE pk=?`, [
                 trade_date,
                 trade_day,
                 resp?.oid,
                 resp?.tid,
                 resp?.ApplNum,
+                setting?.card_percent,
                 item_pk
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
             pay = pay?.result[0];
-            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
-            setting = setting?.result[0];
+            
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
@@ -437,18 +439,20 @@ const onPayResult = async (req, res) => {
             let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0, 2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
             let trade_day = trade_date.substring(0, 10);
             await db.beginTransaction();
-            let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0 WHERE pk=?", [
+            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+            setting = setting?.result[0];
+            let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0, card_percent=? WHERE pk=?", [
                 trade_date,
                 trade_day,
                 MOID,
                 tid,
                 applNum,
-                pay_pk
+                pay_pk,
+                setting?.card_percent
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
-            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
-            setting = setting?.result[0];
+            
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
