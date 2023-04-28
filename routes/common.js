@@ -1679,7 +1679,7 @@ const getItems = async (req, res) => {
             whereStr += ` AND ${table_name}.user_pk=${user_pk} `;
         }
         if(pay_user_pk){
-            whereStr += ` AND (${table_name}.lessee_pk=${pay_user_pk} OR ${table_name}.landlord_pk=${pay_user_pk} OR ${table_name}.realtor_pk=${pay_user_pk}) `;
+            whereStr += ` AND (${table_name}.lessee_pk=${pay_user_pk} ) `;
         }
         if (master_pk) {
             whereStr += ` AND ${table_name}.master_pk=${master_pk} `;
