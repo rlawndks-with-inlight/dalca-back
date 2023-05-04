@@ -485,6 +485,7 @@ const onPayResult = async (req, res) => {
             return response(req, res, -100, resultMsg, [])
         }
     } catch (err) {
+        await db.rollback();
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }

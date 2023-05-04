@@ -150,6 +150,7 @@ const onSignUp = async (req, res) => {
             id_number_src,
             bank_name,
             account_number,
+            is_agree_brokerage_fee
         } = req.body;
         console.log(req.body)
         let is_manager = false;
@@ -198,8 +199,9 @@ const onSignUp = async (req, res) => {
             id_number_src,
             bank_name,
             account_number,
+            is_agree_brokerage_fee
         }
-        let type_number = ['user_level', 'type', 'office_lng', 'office_lat']
+        let type_number = ['user_level', 'type', 'office_lng', 'office_lat', 'is_agree_brokerage_fee']
         let insertKeys = Object.keys(insert_obj);
         let insertValues = [];
         for (var i = 0; i < insertKeys.length; i++) {
@@ -841,6 +843,8 @@ const updateUser = async (req, res) => {
         const office_src = req.body.office_src ?? "";
         const bank_book_src = req.body.bank_book_src ?? "";
         const id_number_src = req.body.id_number_src ?? "";
+        const is_agree_brokerage_fee = req.body.is_agree_brokerage_fee ?? "";
+        
         const pk = req.body.pk ?? 0;
         let body_ = {
             id,
@@ -863,6 +867,7 @@ const updateUser = async (req, res) => {
             office_src,
             bank_book_src,
             id_number_src,
+            is_agree_brokerage_fee,
         }
         let body = {...body_};
         if (pw) {
@@ -873,8 +878,7 @@ const updateUser = async (req, res) => {
         let keys = Object.keys(body);
         for(var i = 0;i<keys.length;i++){
             let key = keys[i];
-            console.log(key)
-            console.log(!body[`${key}`])
+           
             if(!body[`${key}`]){
                 delete body[`${key}`];
             }
@@ -1733,7 +1737,6 @@ const getItems = async (req, res) => {
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
 
-        console.log(sql)
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }
@@ -2096,8 +2099,8 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 result_obj['user'][i]['lng'] = result_obj['user'][i]['office_lng'];
                 result_obj['user'][i]['table'] = 'user';
             }
+            
             let list = [...result_obj['user'], ...result_obj['real_estate']];
-
             page_result = [{ 'COUNT(*)': list.length }];
             list = list.sort((a, b) => {
                 if (a.date > b.date) return -1;
@@ -2114,7 +2117,6 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
         page_result = page_result?.result;
         result = await dbQueryList(sql);
         result = result?.result;
-
     }
     return {
         page_result: page_result,
@@ -2397,10 +2399,13 @@ const updateSetting = (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+
 const updateStatus = (req, res) => {
     try {
         const { table, pk, num, column } = req.body;
-        db.query(`UPDATE ${table}_table SET ${column}=? WHERE pk=? `, [num, pk], (err, result) => {
+
+        let sql = `UPDATE ${table}_table SET ${column}=? WHERE pk=? `
+        db.query(sql, [num, pk], (err, result) => {
             if (err) {
                 console.log(err)
                 return response(req, res, -200, "서버 에러 발생", [])
@@ -2408,7 +2413,8 @@ const updateStatus = (req, res) => {
                 return response(req, res, 100, "success", [])
             }
         })
-    } catch (err) {
+    }
+    catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }

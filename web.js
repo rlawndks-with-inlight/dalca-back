@@ -275,7 +275,6 @@ if (is_test) {
         server = https.createServer(options, app).listen(HTTPS_PORT, function () {
                 console.log("Server on " + HTTPS_PORT);
                 scheduleSystem();
-
         });
 }
 
@@ -328,6 +327,7 @@ app.get('/api/item', async (req, res) => {
                                 }
                         }
                 }
+                db.commit();
                 return response(req, res, 100, "success", item);
         }
         catch (err) {

@@ -4,7 +4,7 @@ const db = require('./config/db')
 const firebase = require("firebase-admin");
 const fcmNode = require("fcm-node");
 const serviceAccount = require("./config/privatekey_firebase.json");
-const { activeQuery } = require('./query-util');
+const { activeQuery, dbQueryList } = require('./query-util');
 const crypto = require('crypto')
 const salt = "435f5ef2ffb83a632c843926b35ae7855bc2520021a73a043db41670bfaeb722"
 const saltRounds = 10
@@ -485,27 +485,30 @@ const initialPay = async (contract) => { // 월세 내역 추가
         }
     }
     result_day = `${return_moment_list[0]}-${return_moment_list[1]}-${return_moment_list[2]}`;
-   
-    let result_brokerage_fee_1 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
-        contract[`${getEnLevelByNum(5)}_pk`],
-        contract[`${getEnLevelByNum(5)}_pk`],
-        contract[`${getEnLevelByNum(10)}_pk`],
-        contract[`brokerage_fee`],
-        3,
-        0,
-        contract[`pk`],
-        result_day
-    ]);
-    let result_brokerage_fee_2 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
-        contract[`${getEnLevelByNum(0)}_pk`],
-        contract[`${getEnLevelByNum(5)}_pk`],
-        contract[`${getEnLevelByNum(10)}_pk`],
-        contract[`brokerage_fee`],
-        3,
-        0,
-        contract[`pk`],
-        result_day
-    ]);
+    let realtor = await dbQueryList(`SELECT * FROM user_table WHERE pk=${contract[`${getEnLevelByNum(10)}_pk`]}`);
+    realtor = realtor?.result[0];
+    if(realtor?.is_agree_brokerage_fee == 1){
+        let result_brokerage_fee_1 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+            contract[`${getEnLevelByNum(5)}_pk`],
+            contract[`${getEnLevelByNum(5)}_pk`],
+            contract[`${getEnLevelByNum(10)}_pk`],
+            contract[`brokerage_fee`],
+            3,
+            0,
+            contract[`pk`],
+            result_day
+        ]);
+        let result_brokerage_fee_2 = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+            contract[`${getEnLevelByNum(0)}_pk`],
+            contract[`${getEnLevelByNum(5)}_pk`],
+            contract[`${getEnLevelByNum(10)}_pk`],
+            contract[`brokerage_fee`],
+            3,
+            0,
+            contract[`pk`],
+            result_day
+        ]);
+    }
     let result_monthly = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
         contract[`${getEnLevelByNum(0)}_pk`],
         contract[`${getEnLevelByNum(5)}_pk`],
