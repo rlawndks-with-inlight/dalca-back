@@ -447,8 +447,8 @@ const onPayResult = async (req, res) => {
                 MOID,
                 tid,
                 applNum,
+                setting?.card_percent,
                 pay_pk,
-                setting?.card_percent
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
