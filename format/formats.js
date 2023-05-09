@@ -11,8 +11,8 @@ const listFormatBySchema = (schema, data_, body_) => {
            
             if(data[i]?.type==0){//월세
                 if(data[i]?.status==1){
-                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 ${data[i]?.pay_day.substring(0, 7)} 일자 월세 결제에 의해 발생`;
-                    data[i]['user_note'] = `${data[i]?.pay_day.substring(0, 7)} 일자 월세 결제에 의해 발생`;
+                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 ${data[i]?.pay_day.substring(0, 7)} 월세 결제에 의해 발생`;
+                    data[i]['user_note'] = `${data[i]?.pay_day.substring(0, 7)} 월세 결제에 의해 발생`;
                 }else{
                     data[i]['manager_note'] = `포인트 취소`;
                     data[i]['user_note'] = `포인트 취소`;
@@ -137,6 +137,8 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
             'pay_table.price AS pay_price',
         ]
         sql = ` SELECT ${columns.join()} FROM point_table `;
+        page_sql += ` LEFT JOIN user_table ON point_table.user_pk=user_table.pk `;
+        page_sql += ` LEFT JOIN pay_table ON point_table.pay_pk=pay_table.pk `;
         sql += ` LEFT JOIN user_table ON point_table.user_pk=user_table.pk `;
         sql += ` LEFT JOIN pay_table ON point_table.pay_pk=pay_table.pk `;
         if(decode?.user_level==0 ||decode?.user_level==5 ||decode?.user_level==10 ){

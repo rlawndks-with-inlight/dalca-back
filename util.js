@@ -386,6 +386,8 @@ const getKewordListBySchema = (schema_) => {
         list = ['real_estate_table.name', 'real_estate_table.hash', 'real_estate_table.address', 'real_estate_table.zip_code'];
     } else if (schema == 'alarm') {
         list = [];
+    } else if (schema == 'point') {
+        list = ['user_table.name'];
     } else {
         link = [];
     }

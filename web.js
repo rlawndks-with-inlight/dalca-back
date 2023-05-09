@@ -240,7 +240,7 @@ const scheduleSystem = () => {
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
                                         let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day, is_auto, trade_date, trade_day, order_num, transaction_num, approval_num) VALUES ?`, [pay_list]);
-                                        let send_message = `${return_moment.substring(0, 10)} 일자 월세 납부 바랍니다.\n\n-달카페이-`;
+                                        let send_message = `${return_moment.substring(0, 10)} 월세 납부 바랍니다.\n\n-달카페이-`;
                                         for (var i = 0; i < pay_list.length; i++) {
                                                 let result2 = await sendAligoSms({ receivers: users_obj[pay_list[i][0]].phone, message: send_message })
                                         }
