@@ -68,16 +68,7 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
     let page_sql = page_sql_;
     let order = order_;
     let where_str = where_str_;
-    if(schema=='academy_category'){
-        sql = ` SELECT academy_category_table.*, user_table.nickname AS master_nickname FROM academy_category_table`;
-        page_sql += ` LEFT JOIN user_table ON academy_category_table.master_pk=user_table.pk `;
-        sql += ` LEFT JOIN user_table ON academy_category_table.master_pk=user_table.pk `;
-        order = 'academy_category_table.sort'
-    }else if(schema=='academy'){
-        page_sql += ` LEFT JOIN academy_category_table ON academy_table.category_pk=academy_category_table.pk `;
-        sql = ` SELECT academy_table.*, academy_category_table.title AS class_title FROM academy_table`;
-        sql += ` LEFT JOIN academy_category_table ON academy_table.category_pk=academy_category_table.pk `;
-    }else if(schema=='notice'){
+    if(schema=='notice'){
         sql = ` SELECT notice_table.*, user_table.nickname AS nickname FROM notice_table`;
         page_sql += ` LEFT JOIN user_table ON notice_table.user_pk=user_table.pk `;
         sql += ` LEFT JOIN user_table ON notice_table.user_pk=user_table.pk `;
@@ -95,22 +86,6 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
         page_sql += ` LEFT JOIN user_table ON comment_table.user_pk=user_table.pk `;
         sql += ` LEFT JOIN user_table ON comment_table.user_pk=user_table.pk `;
         order = 'pk'
-    }else if(schema=='subscribe'){
-        sql = ` SELECT subscribe_table.*, u_t.nickname AS nickname, u_t.id AS id, u_t.name AS user_name, u_t.phone AS phone,u_t.bank_name AS bank_name,u_t.account_number AS account_number,u_t.account_holder AS account_holder, academy_category_table.title AS title, academy_category_table.start_date AS start_date,academy_category_table.end_date AS end_date, m_t.nickname AS master_nickname FROM subscribe_table`;
-        page_sql += ` LEFT JOIN user_table AS u_t ON subscribe_table.user_pk=u_t.pk `;
-        page_sql += ` LEFT JOIN academy_category_table ON subscribe_table.academy_category_pk=academy_category_table.pk `;
-        page_sql += ` LEFT JOIN user_table AS m_t ON subscribe_table.master_pk=m_t.pk `;
-        sql += ` LEFT JOIN user_table AS u_t ON subscribe_table.user_pk=u_t.pk `;
-        sql += ` LEFT JOIN academy_category_table ON subscribe_table.academy_category_pk=academy_category_table.pk `;
-        sql += ` LEFT JOIN user_table AS m_t ON subscribe_table.master_pk=m_t.pk `;
-        order = 'pk'
-    }else if(schema=='review'){
-        sql = ` SELECT review_table.*, user_table.nickname AS nickname, user_table.id AS id, academy_category_table.title AS item_title FROM review_table`;
-        page_sql += ` LEFT JOIN user_table ON review_table.user_pk=user_table.pk `;
-        page_sql += ` LEFT JOIN academy_category_table ON review_table.academy_category_pk=academy_category_table.pk `;
-        sql += ` LEFT JOIN user_table ON review_table.user_pk=user_table.pk `;
-        sql += ` LEFT JOIN academy_category_table ON review_table.academy_category_pk=academy_category_table.pk `;
-        order = 'pk'
     }else if(schema=='contract'){
         sql = ` SELECT * FROM v_contract `;
         page_sql = ` SELECT COUNT(*) FROM v_contract `
@@ -125,6 +100,8 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
             where_str += ` AND ${getEnLevelByNum(decode?.user_level)}_pk=${decode?.pk} `
         }
         order = 'pk'
+    }else if(schema=='user'){
+        sql = ` SELECT *, (SELECT SUM(price) FROM point_table WHERE user_pk=user_table.pk) AS point_sum FROM user_table `;
     }
     else if(schema=='point'){
         let columns = [

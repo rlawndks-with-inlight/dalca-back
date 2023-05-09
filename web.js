@@ -157,7 +157,6 @@ const scheduleSystem = () => {
                                         if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`] && contracts[i][`${getEnLevelByNum(0)}_appr`] == 1 && contracts[i][`${getEnLevelByNum(5)}_appr`] == 1) {
                                                 let user = users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]];
                                                 let card = await getMyAutoCardReturn(user);
-                                                console.log(card)
                                                 user = { ...user, ...card };
                                                 let pay_one_list = [
                                                         contracts[i][`${getEnLevelByNum(0)}_pk`],
