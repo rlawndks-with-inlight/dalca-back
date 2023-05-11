@@ -690,7 +690,21 @@ const createBillKey = async (decode, body) => {
         }
     }
 }
+const onChangePayStatus = async (req, res) =>{
+    try{
+        const decode = checkLevel(req.cookies.token, 10);
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", []);
+        }
+        const {pay_pk, status} = req.body;
+        let result = await activeQuery(`UPDATE pay_table SET status=${status} WHERE pk=${pay_pk}`);
 
+        return response(req, res, 100, "success", [])
+    }catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+} 
 const getQueryByObject = (obj) => {
     let query = "";
     let keys = Object.keys(obj);
@@ -877,5 +891,5 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
-    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn
+    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus
 };

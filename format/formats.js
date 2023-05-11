@@ -44,10 +44,10 @@ const listFormatBySchema = (schema, data_, body_) => {
             }else if(data[i]?.type==15){//관리자수정
                 if(data[i]?.status==1){
                     data[i]['manager_note'] = `관리자에 의해 추가`;
-                    data[i]['user_note'] = `관리자에 의해 추가`;
+                    data[i]['user_note'] = `${commarNumber(data[i]?.price)} 포인트 추가`;
                 }else{
                     data[i]['manager_note'] = `관리자에 의해 차감`;
-                    data[i]['user_note'] = `관리자에 의해 취소`;
+                    data[i]['user_note'] = `${commarNumber(data[i]?.price)} 포인트 차감`;
                 }
             }
         }
