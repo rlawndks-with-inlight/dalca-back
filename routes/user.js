@@ -48,11 +48,15 @@ const PAY_ADDRESS = {
     TEST: `https://tpayapi.paywelcome.co.kr`,
     SERVICE: `https://payapi.paywelcome.co.kr`,
 }
-const PAY_INFO = {
+const PAY_INFO = {//빌키인증 정보
     SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,
     MID: `wpaybill01`,
     API_IV: `1111111111111111`,
     API_KEY: `11111111111111111111111111111111`
+}
+const IDENTIFICATION_INFO = {//본인확인 api 정보
+    MID: `INIiasTest`,
+    API_KEY: 'TGdxb2l3enJDWFRTbTgvREU3MGYwUT09',
 }
 const addContract = async (req, res) => {
     try {
@@ -378,7 +382,7 @@ const onPayByDirect = async (req, res) => {
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
             pay = pay?.result[0];
-            
+
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
@@ -452,7 +456,7 @@ const onPayResult = async (req, res) => {
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
-            
+
             let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
@@ -690,21 +694,21 @@ const createBillKey = async (decode, body) => {
         }
     }
 }
-const onChangePayStatus = async (req, res) =>{
-    try{
+const onChangePayStatus = async (req, res) => {
+    try {
         const decode = checkLevel(req.cookies.token, 10);
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        const {pay_pk, status} = req.body;
+        const { pay_pk, status } = req.body;
         let result = await activeQuery(`UPDATE pay_table SET status=${status} WHERE pk=${pay_pk}`);
 
         return response(req, res, 100, "success", [])
-    }catch (err) {
+    } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }
-} 
+}
 const getQueryByObject = (obj) => {
     let query = "";
     let keys = Object.keys(obj);
@@ -888,8 +892,39 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
     }
     return result;
 }
+const getIdentificationInfo = async (req, res) => {
+    try {
+        const { level } = req.query;
+        let datetime = returnMoment().replaceAll('-', '').replaceAll(' ', '').replaceAll(':', '');
+        let mTxId = `${level}_${datetime}`;
+        let authHash = `${IDENTIFICATION_INFO.MID}${mTxId}${IDENTIFICATION_INFO.API_KEY}`
+        authHash = await Buffer.from(crypto.createHash('sha256').update(authHash).digest('hex')).toString();
+
+        let obj = {
+            mid: IDENTIFICATION_INFO.MID,
+            reqSvcCd: '01',
+            mTxId: mTxId,
+            authHash: authHash,
+            flgFixedUser: 'N',
+            reservedMsg: 'isUseToken=Y'
+        }
+        return response(req, res, 100, "success", obj);
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const returnIdentificationUrl = (req, res) => {
+    try {
+        console.log(req.body)
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
-    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus
+    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
+    getIdentificationInfo, returnIdentificationUrl
 };
