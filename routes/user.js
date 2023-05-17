@@ -894,18 +894,31 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
 }
 const getIdentificationInfo = async (req, res) => {
     try {
-        const { level } = req.query;
-        let datetime = returnMoment().replaceAll('-', '').replaceAll(' ', '').replaceAll(':', '');
+        let { level, name, phone, birth } = req.body;
+        let return_moment = returnMoment();
+        let datetime = return_moment.replaceAll('-', '').replaceAll(' ', '').replaceAll(':', '');
         let mTxId = `${level}_${datetime}`;
         let authHash = `${IDENTIFICATION_INFO.MID}${mTxId}${IDENTIFICATION_INFO.API_KEY}`
         authHash = await Buffer.from(crypto.createHash('sha256').update(authHash).digest('hex')).toString();
-
+        let birth_year = birth.substring(0, 2);
+        let cur_year = return_moment.substring(2, 4);
+        if (cur_year >= birth_year) {
+            birth = '20' + birth;
+        } else {
+            birth = '19' + birth;
+        }
+        let userHash = `${name}${IDENTIFICATION_INFO.MID}${phone}${mTxId}${birth}01`;
+        userHash = await Buffer.from(crypto.createHash('sha256').update(userHash).digest('hex')).toString();
         let obj = {
             mid: IDENTIFICATION_INFO.MID,
             reqSvcCd: '01',
             mTxId: mTxId,
             authHash: authHash,
-            flgFixedUser: 'N',
+            flgFixedUser: 'Y',
+            userName: name,
+            userPhone: phone,
+            userBirth: birth,
+            userHash: userHash,
             reservedMsg: 'isUseToken=Y'
         }
         return response(req, res, 100, "success", obj);
@@ -916,7 +929,13 @@ const getIdentificationInfo = async (req, res) => {
 }
 const returnIdentificationUrl = (req, res) => {
     try {
+        let body = { ...req.body };
         console.log(req.body)
+        if (body?.resultCode == '0000') {
+            return response(req, res, 100, "success", []);
+        } else {
+            return response(req, res, -100, encodeURI(body?.resultMsg), []);
+        }
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])

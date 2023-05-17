@@ -113,7 +113,7 @@ router.post('/wantpaycancel', onWantPayCancel);
 router.post('/registerautocard', registerAutoCard);
 router.get('/myautocard', getMyAutoCard);
 router.post('/changepaystatus', onChangePayStatus);
-router.get('/gii', getIdentificationInfo);
+router.post('/gii', getIdentificationInfo);
 router.post('/returnidurl', returnIdentificationUrl);
 
 module.exports = router;
