@@ -349,7 +349,7 @@ const onPayByDirect = async (req, res) => {
             return response(req, res, -150, "이미 결제 하였습니다.", []);
         }
         await db.beginTransaction();
-        let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay_item?.contract_pk}`);
+        let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE contract_table.pk=${pay_item?.contract_pk}`);
         contract = contract?.result[0];
         if (pay_item?.pay_category == 0) {
             let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
@@ -449,7 +449,7 @@ const onPayResult = async (req, res) => {
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
 
-            let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay?.contract_pk}`);
+            let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE contract_table.pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
                 let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
