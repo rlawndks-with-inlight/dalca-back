@@ -72,9 +72,9 @@ const addContract = async (req, res) => {
         if (is_user && decode?.user_level != 10) {
             return response(req, res, -150, "공인중개사 권한만 접근 가능합니다.", [])
         }
-        const { deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
-        let result = await activeQuery('INSERT INTO contract_table ( deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [deposit, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
+        const { deposit, down_payment, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list } = req.body;
+        let result = await activeQuery('INSERT INTO contract_table ( deposit, down_payment, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, realtor_pk, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [deposit, down_payment, monthly, brokerage_fee, document_src, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list, decode?.pk, 1]);
         return response(req, res, 100, "success", {
             result_pk: result?.result?.insertId
         });
@@ -91,10 +91,10 @@ const updateContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { deposit, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
+        const { deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
 
-        let value_str = "deposit=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
-        let value_list = [deposit, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pdf_list];
+        let value_str = "deposit=?, down_payment=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
+        let value_list = [deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pdf_list];
         if (document_src) {
             if (document_src == -1) {
                 value_list.push('')
@@ -182,7 +182,6 @@ const requestContractAppr = async (req, res) => {
         let receiver = [user?.phone, formatPhoneNumber(user?.phone)];
         let content = `\n${request_level == 5 ? '임대인' : '임차인'}동의가 필요합니다.\n 링크: https://dalcapay.com/contract/${contract_pk}\n\n-달카페이-`;
         await sendAligoSms({ receivers: receiver, message: content }).then(async (result) => {
-            console.log(result)
             if (result.result_code == '1') {
                 let result = await activeQuery(`UPDATE contract_table SET ${getEnLevelByNum(request_level)}_pk=${user_pk} WHERE pk=${contract_pk}`);
                 return response(req, res, 100, "success", []);
@@ -372,7 +371,7 @@ const onPayByDirect = async (req, res) => {
                 contract[`${getEnLevelByNum(0)}_pk`],
                 contract[`${getEnLevelByNum(5)}_pk`],
                 contract[`${getEnLevelByNum(10)}_pk`],
-                parseInt(contract?.deposit) * 9,
+                parseInt(contract?.deposit - contract?.down_payment),
                 1,
                 0,
                 pay_item?.contract_pk,
@@ -473,7 +472,7 @@ const onPayResult = async (req, res) => {
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
                     contract[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(contract?.deposit) * 9 / 10,
+                    parseInt(contract?.deposit - contract?.down_payment) ,
                     1,
                     0,
                     pay?.contract_pk,
@@ -949,7 +948,6 @@ const getIdentificationInfo = async (req, res) => {
 const returnIdentificationUrl = (req, res) => {
     try {
         let body = { ...req.body };
-        console.log(req.body)
         if (body?.resultCode == '0000') {
             return response(req, res, 100, "success", []);
         } else {

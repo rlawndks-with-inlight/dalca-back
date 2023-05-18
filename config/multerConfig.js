@@ -3,7 +3,6 @@ const sharp = require('sharp');
 const { checkLevel } = require('../util');
 const storage = multer.diskStorage({
         destination: function (req, file, cb) {
-                console.log(file)
                 cb(null, __dirname + `/../image/${file.fieldname}/`);
         },
         filename: function (req, file, cb) {
@@ -12,7 +11,6 @@ const storage = multer.diskStorage({
                 if (decode) {
                         user_pk = `${decode?.pk}`;
                 }
-                console.log(file);
                 let file_type = "";
                 if(file.mimetype.includes('pdf')){
                         file_type = 'pdf';

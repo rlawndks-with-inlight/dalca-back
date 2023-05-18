@@ -48,7 +48,7 @@ const listFormatBySchema = (schema, data_, body_) => {
                     data[i]['user_note'] = `${commarNumber(data[i]?.price)} 포인트 추가`;
                 }else{
                     data[i]['manager_note'] = `관리자에 의해 차감`;
-                    data[i]['user_note'] = `${commarNumber(data[i]?.price)} 포인트 차감`;
+                    data[i]['user_note'] = `${commarNumber(data[i]?.price)} 포인트 사용`;
                 }
             }
         }
@@ -62,14 +62,13 @@ const listFormatBySchema = (schema, data_, body_) => {
         }
     }else if(schema == 'commission'){
         for(var i=0;i<data.length;i++){
-            console.log(data[i])
             if(data[i]['status']==1){
                 if(data[i]['pay_category']==0){
                     data[i]['note'] = `${data[i]['pay_user_name']} 유저 ${data[i]['pay_day']} 월세 결제로 인해 발생 `
                 }
             }else if(data[i]['status']==-1){
                 if(data[i]['pay_category']==0){
-                    data[i]['note'] = `${data[i]['pay_user_name']} 유저 월세 취소로 인해 취소`
+                    data[i]['note'] = `${data[i]['pay_user_name']} 유저 ${data[i]['pay_day']} 월세 취소로 인해 취소`
                 }
             }
         }
@@ -141,7 +140,6 @@ const sqlJoinFormat = async (schema, sql_, order_, page_sql_, where_str_, decode
                 return item?.pk
             });
             user_pk_list.push(decode?.pk);
-            console.log(user_pk_list)
             where_str += ` AND user_pk IN (${user_pk_list.join()}) `
         }
         order = 'pk'
@@ -163,7 +161,6 @@ const sqlJoinFormat = async (schema, sql_, order_, page_sql_, where_str_, decode
         sql += ` LEFT JOIN user_table AS user_table ON commission_table.user_pk=user_table.pk `;
         sql += ` LEFT JOIN pay_table ON commission_table.pay_pk=pay_table.pk `;
         sql += ` LEFT JOIN user_table AS pay_user_table ON commission_table.pay_user_pk=pay_user_table.pk `;
-
         if(decode?.user_level==10){
             where_str += ` AND commission_table.user_pk=${decode?.pk} `
         }

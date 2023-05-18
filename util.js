@@ -366,6 +366,8 @@ const getKewordListBySchema = (schema_) => {
         list = ['pk', 'address', 'lessee_name', 'landlord_name', 'realtor_name'];
     } else if (schema == 'pay') {
         list = ['contract_pk', 'lessee_id', 'landlord_id', 'realtor_id', 'lessee_name', 'landlord_name', 'realtor_name'];
+    }else if (schema == 'commission') {
+        list = ['pay_user_table.name','pay_user_table.id', 'user_table.name', 'user_table.id'];
     } else if (schema == 'academy') {
         list = ['academy_table.title', 'academy_category_table.title'];
     } else if (schema == 'app') {
@@ -461,7 +463,7 @@ const initialDownPayment = async (contract) => {//계약금 내역 추가
                 contract[`${getEnLevelByNum(0)}_pk`],
                 contract[`${getEnLevelByNum(5)}_pk`],
                 contract[`${getEnLevelByNum(10)}_pk`],
-                parseInt(contract[`deposit`]) / 10,
+                parseInt(contract[`down_payment`]),
                 2,
                 0,
                 contract[`pk`],

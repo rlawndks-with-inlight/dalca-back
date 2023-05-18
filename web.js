@@ -57,7 +57,6 @@ const dbQueryList = (sql, list) => {
         return new Promise((resolve, reject) => {
                 db.query(sql, list, (err, result, fields) => {
                         if (err) {
-                                console.log(sql)
                                 console.log(err)
                                 reject({
                                         code: -200,
@@ -167,7 +166,6 @@ const scheduleSystem = () => {
                                                 ]
                                                 if (user['auto_card']?.card_number) {
                                                         let resp = await onPay(user, pay_item);
-                                                        console.log(resp)
                                                         if (resp?.ResultCode == '00') {
                                                                 let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
                                                                 let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
@@ -211,26 +209,6 @@ const scheduleSystem = () => {
                                                 }
 
                                         }
-                                }
-                                let insert_deposit_list = [];
-                                for (var i = 0; i < contracts.length; i++) {
-                                        let distance_day = differenceTwoDate(return_moment.substring(0, 10), contracts[i]?.confirm_date.substring(0, 10));
-                                        if (distance_day == 7) {
-                                                insert_deposit_list.push([
-                                                        contracts[i][`${getEnLevelByNum(0)}_pk`],
-                                                        contracts[i][`${getEnLevelByNum(5)}_pk`],
-                                                        contracts[i][`${getEnLevelByNum(10)}_pk`],
-                                                        parseInt(contracts[i][`deposit`]) * 9 / 10,
-                                                        1,
-                                                        0,
-                                                        contracts[i][`pk`],
-                                                        return_moment.substring(0, 10)
-                                                ])
-                                        }
-                                }
-                                //계약 1주일 후 남은 90프로 보증금 결제 추가
-                                if (insert_deposit_list.length > 0) {
-                                        //let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES ?`, [insert_deposit_list]);
                                 }
                                 //계약 만료 발송
                                 for (var i = 0; i < send_message_list.length; i++) {

@@ -152,7 +152,6 @@ const onSignUp = async (req, res) => {
             account_number,
             is_agree_brokerage_fee
         } = req.body;
-        console.log(req.body)
         let is_manager = false;
         let pw = req.body.pw ?? "";
         const decode = checkLevel(req.cookies.token, 40)
@@ -546,9 +545,7 @@ const sendSms = (req, res) => {
     try {
         let receiver = req.body.receiver;
         const content = req.body.content;
-        console.log(req.body)
         sendAligoSms({ receivers: receiver, message: content }).then((result) => {
-            console.log(result)
             if (result.result_code == '1') {
                 return response(req, res, 100, "success", [])
             } else {
@@ -1189,7 +1186,6 @@ const addItemByUser = async (req, res) => {
         await db.beginTransaction();
         let result = await activeQuery(sql, values);
 
-        console.log(result)
         //let result2 = await activeQuery(`UPDATE ${table}_table SET sort=? WHERE pk=?`, [result?.result?.insertId, result?.result?.insertId]);
 
         await db.commit();
@@ -1358,7 +1354,6 @@ const addImageItems = (req, res) => {
         let files = { ...req.files };
         let files_keys = Object.keys(files);
         let result = [];
-        console.log(files)
         for (var i = 0; i < files_keys.length; i++) {
             result.push({
                 key: files_keys[i],
@@ -1603,21 +1598,28 @@ const getUserStatistics = async (req, res) => {
     }
 }
 
-const getOptionObjBySchema = async (schema, whereStr) => {
+const getOptionObjBySchema = async (schema, whereStr, decode, body) => {
     let obj = {};
-    if (schema == 'subscribe') {
-        let sql = ` ${(await sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `))?.page_sql} ${whereStr} AND ${schema}_table.transaction_status >= 0`;
-        let option = await dbQueryList(sql);
-        option = option?.result[0];
-        let sql2 = ` ${(await sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `))?.page_sql} ${whereStr} AND ${schema}_table.transaction_status < 0 `;
-        let cancel_people = await dbQueryList(sql2);
-        cancel_people = cancel_people?.result[0];
-        obj = {
-            people_num: { title: '총 수강인원', content: commarNumber(((option?.people_num ?? 0) - (cancel_people?.people_num ?? 0))) },
+    if (schema == 'commission') {
+        let api_str = `SELECT SUM(commission_table.price) AS sum_price FROM commission_table `;
+        api_str += ` LEFT JOIN user_table AS user_table ON commission_table.user_pk=user_table.pk `;
+        api_str += ` LEFT JOIN pay_table ON commission_table.pay_pk=pay_table.pk `;
+        api_str += ` LEFT JOIN user_table AS pay_user_table ON commission_table.pay_user_pk=pay_user_table.pk `;
+        if (decode?.user_level == 10) {
+            api_str += ` WHERE commission_table.user_pk=${decode?.pk} `
+            if (body?.start_date && body?.end_date) {
+                whereStr += ` AND (commission_table.date BETWEEN '${body?.start_date} 00:00:00' AND '${body?.end_date} 23:59:59' ) `;
+            }
+        } else {
+            api_str += whereStr
         }
-        if (!whereStr.includes('status=0')) {
-            obj.sum_price = { title: '총 결제금액', content: commarNumber(((option?.sum_price ?? 0) + (cancel_people?.sum_price ?? 0))) }
-        }
+
+        let pay_sum = await dbQueryList(api_str);
+        pay_sum = pay_sum?.result[0];
+        obj['pay_sum'] = {
+            title: '전체금액',
+            content: `${commarNumber(pay_sum?.sum_price)}원`
+        };
     }
     return obj;
 }
@@ -1738,11 +1740,9 @@ const getItems = async (req, res) => {
         whereStr = (await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode)).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
-
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }
-        console.log(sql)
         if (page) {
             sql += ` LIMIT ${(page - 1) * page_cut}, ${page_cut}`;
             let get_result = await getItemsReturnBySchema(sql, pageSql, table, body, decode);
@@ -1753,7 +1753,7 @@ const getItems = async (req, res) => {
             result = await listFormatBySchema(table, result);
 
             let maxPage = page_result[0]['COUNT(*)'] % page_cut == 0 ? (page_result[0]['COUNT(*)'] / page_cut) : ((page_result[0]['COUNT(*)'] - page_result[0]['COUNT(*)'] % page_cut) / page_cut + 1);
-            let option_obj = await getOptionObjBySchema(table, whereStr);
+            let option_obj = await getOptionObjBySchema(table, whereStr, decode, body);
             if (want_use_count.includes(table)) {
                 option_obj['result_count'] = {
                     title: '검색결과 수',
@@ -1789,6 +1789,7 @@ const editContract = async (req, res) => {
             address_detail,
             is_auto_pay,
             deposit,
+            down_payment,
             monthly,
             brokerage_fee,
             start_date,
@@ -1807,6 +1808,7 @@ const editContract = async (req, res) => {
             address_detail,
             is_auto_pay,
             deposit,
+            down_payment,
             monthly,
             brokerage_fee,
             start_date,
@@ -2697,7 +2699,6 @@ const insertUserMoneyByExcel = async (req, res) => {
 const isOrdered = async (decode, item) => {
     let is_already_subscribe = await dbQueryList(`SELECT * FROM subscribe_table WHERE user_pk=${decode?.pk} AND status=1 AND academy_category_pk=${item?.pk} AND end_date >= '${returnMoment().substring(0, 10)}' AND use_status=1 AND transaction_status >= 0 `);
     is_already_subscribe = is_already_subscribe?.result;
-    console.log(is_already_subscribe)
     return is_already_subscribe.length > 0 ? true : false;
 }
 
@@ -2798,7 +2799,6 @@ const onKeyrecieve = async (req, res) => {
 const onNotiKiwoom = (req, res) => {
     try {
         let { PAYMETHOD, CPID, DAOUTRX, ORDERNO, AMOUNT, PRODUCTNAME, SETTDATE, AUTHNO, RESERVEDSTRING, CARDCODE, CARDNAME, CARDNO } = req.query;
-        console.log(req.query);
         res.send("success");
     } catch (err) {
         console.log(err);
