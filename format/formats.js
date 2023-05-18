@@ -60,6 +60,19 @@ const listFormatBySchema = (schema, data_, body_) => {
                 data[i]['address_detail'] = data[i]['office_address_detail'];
             }
         }
+    }else if(schema == 'commission'){
+        for(var i=0;i<data.length;i++){
+            console.log(data[i])
+            if(data[i]['status']==1){
+                if(data[i]['pay_category']==0){
+                    data[i]['note'] = `${data[i]['pay_user_name']} 유저 ${data[i]['pay_day']} 월세 결제로 인해 발생 `
+                }
+            }else if(data[i]['status']==-1){
+                if(data[i]['pay_category']==0){
+                    data[i]['note'] = `${data[i]['pay_user_name']} 유저 월세 취소로 인해 취소`
+                }
+            }
+        }
     }
     if(schema)
         return data;
@@ -104,8 +117,7 @@ const sqlJoinFormat = async (schema, sql_, order_, page_sql_, where_str_, decode
         order = 'pk'
     }else if(schema=='user'){
         sql = ` SELECT *, (SELECT SUM(price) FROM point_table WHERE user_pk=user_table.pk) AS point_sum FROM user_table `;
-    }
-    else if(schema=='point'){
+    }else if(schema=='point'){
         let columns = [
             'point_table.*',
             'user_table.id AS user_id',
@@ -131,6 +143,29 @@ const sqlJoinFormat = async (schema, sql_, order_, page_sql_, where_str_, decode
             user_pk_list.push(decode?.pk);
             console.log(user_pk_list)
             where_str += ` AND user_pk IN (${user_pk_list.join()}) `
+        }
+        order = 'pk'
+    }else if(schema=='commission'){
+        let columns = [
+            'commission_table.*',
+            'user_table.id AS user_id',
+            'user_table.name AS user_name',
+            'user_table.user_level AS user_level',
+            'pay_table.pay_category AS pay_category',
+            'pay_table.day AS pay_day',
+            'pay_user_table.name AS pay_user_name',
+            'pay_user_table.id AS pay_user_id',
+        ]
+        sql = ` SELECT ${columns.join()} FROM commission_table `;
+        page_sql += ` LEFT JOIN user_table AS user_table ON commission_table.user_pk=user_table.pk `;
+        page_sql += ` LEFT JOIN pay_table ON commission_table.pay_pk=pay_table.pk `;
+        page_sql += ` LEFT JOIN user_table AS pay_user_table ON commission_table.pay_user_pk=pay_user_table.pk `;
+        sql += ` LEFT JOIN user_table AS user_table ON commission_table.user_pk=user_table.pk `;
+        sql += ` LEFT JOIN pay_table ON commission_table.pay_pk=pay_table.pk `;
+        sql += ` LEFT JOIN user_table AS pay_user_table ON commission_table.pay_user_pk=pay_user_table.pk `;
+
+        if(decode?.user_level==10){
+            where_str += ` AND commission_table.user_pk=${decode?.pk} `
         }
         order = 'pk'
     }

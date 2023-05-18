@@ -359,12 +359,13 @@ const onPayByDirect = async (req, res) => {
                 pay_item[`${getEnLevelByNum(0)}_pk`],
                 item_pk
             ])
-            let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+            let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status, pay_user_pk) VALUES (?, ?, ?, ?, ?, ?)`, [
                 pay_item[`${getEnLevelByNum(10)}_pk`],
                 item_pk,
                 contract?.commission_percent,
                 parseInt(pay_item?.price) * (contract?.commission_percent) / 100,
                 1,
+                pay_item[`${getEnLevelByNum(0)}_pk`],
             ])
         } else if (pay_item?.pay_category == 2) {
             let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
@@ -459,12 +460,13 @@ const onPayResult = async (req, res) => {
                     pay[`${getEnLevelByNum(0)}_pk`],
                     pay_pk
                 ])
-                let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+                let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status, pay_user_pk) VALUES (?, ?, ?, ?, ?, ?)`, [
                     pay[`${getEnLevelByNum(10)}_pk`],
                     pay_pk,
                     contract?.commission_percent,
                     parseInt(pay?.price) * (contract?.commission_percent) / 100,
                     1,
+                    pay[`${getEnLevelByNum(0)}_pk`]
                 ])
             } else if (pay?.pay_category == 2) {
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
@@ -581,12 +583,13 @@ const onPayCancelByDirect = async (req, res) => {
             pay_item[`${getEnLevelByNum(0)}_pk`],
             item_pk
         ])
-        let delete_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+        let delete_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status, pay_user_pk) VALUES (?, ?, ?, ?, ?, ?)`, [
             pay_item[`${getEnLevelByNum(10)}_pk`],
             item_pk,
             0,
             commission?.price * (-1),
-            -1
+            -1,
+            pay_item[`${getEnLevelByNum(0)}_pk`],
         ])
         let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
         const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
