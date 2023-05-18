@@ -832,6 +832,7 @@ const updateUser = async (req, res) => {
         const zip_code = req.body.zip_code ?? "";
 
         const office_name = req.body.office_name ?? "";
+        const commission_percent = req.body.commission_percent ?? 1;
         const company_number = req.body.company_number ?? "";
         const office_address = req.body.office_address ?? "";
         const office_address_detail = req.body.office_address_detail ?? "";
@@ -856,6 +857,7 @@ const updateUser = async (req, res) => {
             address_detail,
             zip_code,
             office_name,
+            commission_percent,
             company_number,
             office_address,
             office_address_detail,
