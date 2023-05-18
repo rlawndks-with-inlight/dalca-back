@@ -12,7 +12,7 @@ const {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus, 
-    getIdentificationInfo, returnIdentificationUrl
+    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo
 } = require('./user');
 const image_list = [
     { name: 'master' },
@@ -115,5 +115,6 @@ router.get('/myautocard', getMyAutoCard);
 router.post('/changepaystatus', onChangePayStatus);
 router.post('/gii', getIdentificationInfo);
 router.post('/returnidurl', returnIdentificationUrl);
+router.post('/gcii', getCardIdentificationInfo);
 
 module.exports = router;

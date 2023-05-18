@@ -1740,6 +1740,7 @@ const getItems = async (req, res) => {
         if (limit && !page) {
             sql += ` LIMIT ${limit} `;
         }
+        console.log(sql)
         if (page) {
             sql += ` LIMIT ${(page - 1) * page_cut}, ${page_cut}`;
             let get_result = await getItemsReturnBySchema(sql, pageSql, table, body, decode);

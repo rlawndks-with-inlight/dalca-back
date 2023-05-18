@@ -49,7 +49,8 @@ const PAY_ADDRESS = {
     SERVICE: `https://payapi.paywelcome.co.kr`,
 }
 const PAY_INFO = {//빌키인증 정보
-    SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,
+    SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,//빌키 sign 키
+    CERTIFICATION_SIGN_KEY:'QjZXWDZDRmxYUXJPYnMvelEvSjJ5QT09',//인증 sign키
     MID: `wpaybill01`,
     API_IV: `1111111111111111`,
     API_KEY: `11111111111111111111111111111111`
@@ -57,6 +58,9 @@ const PAY_INFO = {//빌키인증 정보
 const IDENTIFICATION_INFO = {//본인확인 api 정보
     MID: `INIiasTest`,
     API_KEY: 'TGdxb2l3enJDWFRTbTgvREU3MGYwUT09',
+}
+const MY_CARD_IDENTIFICATION_INFO = {//카드 본인확인 정보
+    MID: `INICAStest`,
 }
 const addContract = async (req, res) => {
     try {
@@ -437,6 +441,7 @@ const onPayResult = async (req, res) => {
             buyerTel,
             buyerName,
             temp,
+            mid
         } = req.body;
         if (resultCode == '0000') {
             let pay_pk = temp;
@@ -445,13 +450,14 @@ const onPayResult = async (req, res) => {
             await db.beginTransaction();
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
-            let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0, card_percent=? WHERE pk=?", [
+            let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0, card_percent=?, mid=? WHERE pk=?", [
                 trade_date,
                 trade_day,
                 MOID,
                 tid,
                 applNum,
                 setting?.card_percent,
+                mid,
                 pay_pk,
             ])
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
@@ -528,10 +534,17 @@ const onPayCancelByDirect = async (req, res) => {
         pay_item = pay_item?.result[0];
 
         let payType = 'card';
-        let mid = PAY_INFO.MID;
-        let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
+        let mid = pay_item?.mid || PAY_INFO.MID//PAY_INFO.MID;
+        let signKey = ''
+
+        if(mid == PAY_INFO.MID){
+            signKey = PAY_INFO.SIGN_KEY
+        }else{
+            signKey = PAY_INFO.CERTIFICATION_SIGN_KEY
+        }
+        let mkey = await Buffer.from(crypto.createHash('sha256').update(signKey).digest('hex')).toString();
         let tid = pay_item?.transaction_num;
-        let price = pay_item?.price;
+        let price = pay_item?.price*((100+pay_item?.card_percent)/100);
         let currency = 'WON';
         let return_moment = returnMoment();
         return_moment = return_moment.replaceAll('-', '');
@@ -558,9 +571,10 @@ const onPayCancelByDirect = async (req, res) => {
         let headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
         }
+        console.log(obj)
         const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
         await db.beginTransaction();
-
+        console.log(resp)
         if (resp?.ResultCode == '00') {
             let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
             let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
@@ -586,7 +600,7 @@ const onPayCancelByDirect = async (req, res) => {
                 -1,
                 pay?.pay_category,
                 pay[`${getEnLevelByNum(0)}_pk`],
-                pay_pk
+                item_pk
             ])
             let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
             await db.commit();
@@ -941,9 +955,29 @@ const returnIdentificationUrl = (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const getCardIdentificationInfo = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        let { level, name, phone, birth } = req.body;
+        let return_moment = returnMoment();
+        let datetime = return_moment.replaceAll('-', '').replaceAll(' ', '').replaceAll(':', '');
+        let Tradeid = `${decode?.pk}_${datetime}`;
+        let obj = {
+            mid: MY_CARD_IDENTIFICATION_INFO.MID,
+            Tradeid: Tradeid
+        }
+        return response(req, res, 100, "success", obj);
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
 module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
-    getIdentificationInfo, returnIdentificationUrl
+    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo
 };
