@@ -164,7 +164,7 @@ const onSignUp = async (req, res) => {
         let find_user = await dbQueryList(`SELECT * FROM user_table WHERE id=?`, [id]);
         find_user = find_user?.result;
         if (find_user.length > 0) {
-            return response(req, res, -100, "아이디가 중복됩니다.", {step:0});
+            return response(req, res, -100, "아이디가 중복됩니다.", { step: 0 });
         }
         let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`, [phone]);
         find_phone = find_phone?.result;
@@ -552,7 +552,7 @@ const sendSms = (req, res) => {
             if (result.result_code == '1') {
                 return response(req, res, 100, "success", [])
             } else {
-                return response(req, res, -100,result?.message, [])
+                return response(req, res, -100, result?.message, [])
             }
         });
     } catch (e) {
@@ -652,10 +652,10 @@ const checkExistIdByManager = (req, res) => {
                 console.log(err)
                 return response(req, res, -200, "서버 에러 발생", [])
             } else {
-                if(result.length>0){
+                if (result.length > 0) {
                     return response(req, res, 100, "success", result[0])
 
-                }else{
+                } else {
                     return response(req, res, -100, "찾을 수 없는 유저입니다.", [])
                 }
             }
@@ -844,7 +844,7 @@ const updateUser = async (req, res) => {
         const bank_book_src = req.body.bank_book_src ?? "";
         const id_number_src = req.body.id_number_src ?? "";
         const is_agree_brokerage_fee = req.body.is_agree_brokerage_fee ?? "";
-        
+
         const pk = req.body.pk ?? 0;
         let body_ = {
             id,
@@ -869,17 +869,17 @@ const updateUser = async (req, res) => {
             id_number_src,
             is_agree_brokerage_fee,
         }
-        let body = {...body_};
+        let body = { ...body_ };
         if (pw) {
             pw = await makeHash(pw);
             pw = pw?.data;
             body['pw'] = pw;
         }
         let keys = Object.keys(body);
-        for(var i = 0;i<keys.length;i++){
+        for (var i = 0; i < keys.length; i++) {
             let key = keys[i];
-           
-            if(!body[`${key}`]){
+
+            if (!body[`${key}`]) {
                 delete body[`${key}`];
             }
         }
@@ -1604,10 +1604,10 @@ const getUserStatistics = async (req, res) => {
 const getOptionObjBySchema = async (schema, whereStr) => {
     let obj = {};
     if (schema == 'subscribe') {
-        let sql = ` ${sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `)?.page_sql} ${whereStr} AND ${schema}_table.transaction_status >= 0`;
+        let sql = ` ${(await sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `))?.page_sql} ${whereStr} AND ${schema}_table.transaction_status >= 0`;
         let option = await dbQueryList(sql);
         option = option?.result[0];
-        let sql2 = ` ${sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `)?.page_sql} ${whereStr} AND ${schema}_table.transaction_status < 0 `;
+        let sql2 = ` ${(await sqlJoinFormat(schema, ``, "", `SELECT COUNT(*) AS people_num, SUM(${schema}_table.price) AS sum_price FROM ${schema}_table `))?.page_sql} ${whereStr} AND ${schema}_table.transaction_status < 0 `;
         let cancel_people = await dbQueryList(sql2);
         cancel_people = cancel_people?.result[0];
         obj = {
@@ -1682,7 +1682,7 @@ const getItems = async (req, res) => {
         if (user_pk) {
             whereStr += ` AND ${table_name}.user_pk=${user_pk} `;
         }
-        if(pay_user_pk){
+        if (pay_user_pk) {
             whereStr += ` AND (${table_name}.lessee_pk=${pay_user_pk} ) `;
         }
         if (master_pk) {
@@ -1703,7 +1703,7 @@ const getItems = async (req, res) => {
         if (price_is_minus) {
             whereStr += ` AND ${table_name}.transaction_status ${price_is_minus == 1 ? ' = -1 ' : ' = 0 '} `;
         }
-        if(is_landlord){
+        if (is_landlord) {
             whereStr += `AND ((pay_category=3 AND lessee_pk=${decode?.pk}) OR pay_category < 3)`
         }
         if (is_contract) {
@@ -1730,10 +1730,10 @@ const getItems = async (req, res) => {
             page_cut = 15;
         }
 
-        sql = await sqlJoinFormat(table, sql, order, pageSql).sql;
-        pageSql = await sqlJoinFormat(table, sql, order, pageSql).page_sql;
-        order = await sqlJoinFormat(table, sql, order, pageSql).order;
-        whereStr = await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode).where_str;
+        sql = (await sqlJoinFormat(table, sql, order, pageSql)).sql;
+        pageSql = (await sqlJoinFormat(table, sql, order, pageSql)).page_sql;
+        order = (await sqlJoinFormat(table, sql, order, pageSql)).order;
+        whereStr = (await sqlJoinFormat(table, sql, order, pageSql, whereStr, decode)).where_str;
         pageSql = pageSql + whereStr;
         sql = sql + whereStr + ` ORDER BY ${order ? order : 'sort'} DESC `;
 
@@ -1844,7 +1844,7 @@ const editContract = async (req, res) => {
         for (var i = 0; i < keys.length; i++) {
             values.push(body[keys[i]]);
         }
-        
+
         if (edit_category == 'add') {
             let questions = [];
             for (var i = 0; i < keys.length; i++) {
@@ -2048,7 +2048,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
             let where_str_user = ' WHERE 1=1 '
             let real_keyword_columns = getKewordListBySchema('real_estate');
             let where_str_real = " WHERE 1=1 "
-           
+
             if (keyword) {
                 if (user_keyword_columns?.length > 0) {
                     where_str_user += " AND (";
@@ -2065,7 +2065,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                     where_str_real += ")";
                 }
             }
-            if(body.status){
+            if (body.status) {
                 where_str_user += ` AND status=${body.status} `
                 where_str_real += ` AND status=${body.status} `
             }
@@ -2090,7 +2090,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
             for (var i = 0; i < (await when_result).length; i++) {
                 result_obj[(await when_result[i])?.table] = (await when_result[i])?.data;
             }
-            for(var i =0;i<result_obj['user'].length;i++){
+            for (var i = 0; i < result_obj['user'].length; i++) {
                 result_obj['user'][i]['name'] = result_obj['user'][i]['office_name'];
                 result_obj['user'][i]['phone'] = result_obj['user'][i]['office_phone'];
                 result_obj['user'][i]['address'] = result_obj['user'][i]['office_address'];
@@ -2100,7 +2100,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 result_obj['user'][i]['lng'] = result_obj['user'][i]['office_lng'];
                 result_obj['user'][i]['table'] = 'user';
             }
-            
+
             let list = [...result_obj['user'], ...result_obj['real_estate']];
             page_result = [{ 'COUNT(*)': list.length }];
             list = list.sort((a, b) => {

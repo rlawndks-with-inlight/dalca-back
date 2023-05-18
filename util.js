@@ -363,7 +363,7 @@ const getKewordListBySchema = (schema_) => {
     } else if (schema == 'comment') {
         list = ['user_table.id', 'user_table.nickname', 'note', 'item_title'];
     } else if (schema == 'contract') {
-        list = ['pk', 'address', 'lessee_id', 'landlord_id', 'realtor_id'];
+        list = ['pk', 'address', 'lessee_name', 'landlord_name', 'realtor_name'];
     } else if (schema == 'pay') {
         list = ['contract_pk', 'lessee_id', 'landlord_id', 'realtor_id', 'lessee_name', 'landlord_name', 'realtor_name'];
     } else if (schema == 'academy') {

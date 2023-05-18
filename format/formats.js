@@ -1,4 +1,5 @@
-const { commarNumber, getEnLevelByNum } = require("../util");
+const { dbQueryList } = require("../query-util");
+const { commarNumber, getEnLevelByNum, makeMaxPage } = require("../util");
 
 
 const listFormatBySchema = (schema, data_, body_) => {
@@ -63,11 +64,12 @@ const listFormatBySchema = (schema, data_, body_) => {
     if(schema)
         return data;
 }
-const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
+const sqlJoinFormat = async (schema, sql_, order_, page_sql_, where_str_, decode) => {
     let sql = sql_;
     let page_sql = page_sql_;
     let order = order_;
     let where_str = where_str_;
+   
     if(schema=='notice'){
         sql = ` SELECT notice_table.*, user_table.nickname AS nickname FROM notice_table`;
         page_sql += ` LEFT JOIN user_table ON notice_table.user_pk=user_table.pk `;
@@ -108,6 +110,7 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
             'point_table.*',
             'user_table.id AS user_id',
             'user_table.name AS user_name',
+            'user_table.user_level AS user_level',
             'pay_table.contract_pk AS contract_pk',
             'pay_table.day AS pay_day',
             'pay_table.type AS pay_type',
@@ -118,8 +121,16 @@ const sqlJoinFormat = (schema, sql_, order_, page_sql_, where_str_, decode) => {
         page_sql += ` LEFT JOIN pay_table ON point_table.pay_pk=pay_table.pk `;
         sql += ` LEFT JOIN user_table ON point_table.user_pk=user_table.pk `;
         sql += ` LEFT JOIN pay_table ON point_table.pay_pk=pay_table.pk `;
-        if(decode?.user_level==0 ||decode?.user_level==5 ||decode?.user_level==10 ){
+        if(decode?.user_level==0 ||decode?.user_level==5 ){
             where_str += ` AND user_pk=${decode?.pk} `
+        } else if(decode?.user_level==10){
+            let data = await getCustomInfoReturn(decode, decode?.user_level, )
+            let user_pk_list = data.user_list.map(item=>{
+                return item?.pk
+            });
+            user_pk_list.push(decode?.pk);
+            console.log(user_pk_list)
+            where_str += ` AND user_pk IN (${user_pk_list.join()}) `
         }
         order = 'pk'
     }
@@ -145,8 +156,42 @@ const myItemSqlJoinFormat = (schema, sql_, order_, page_sql_) => {
         order:order
     }
 }
+const getCustomInfoReturn = async (decode, level, page) => {
+    let my_contracts = await dbQueryList(`SELECT * FROM contract_table WHERE ${getEnLevelByNum(decode?.user_level)}_pk=${decode?.pk} ORDER by pk DESC`);
+    my_contracts = my_contracts?.result;
+    let user_pk_list = my_contracts.map((item) => {
+        return item[`${getEnLevelByNum(level)}_pk`]
+    })
+    user_pk_list = new Set(user_pk_list);
+    user_pk_list = [...user_pk_list];
+    user_pk_list = user_pk_list.filter(
+        (element, i) => element
+    );
+
+    let user_count = 0;
+    if (user_pk_list.length > 0) {
+        user_count = await dbQueryList(`SELECT COUNT(*) FROM user_table WHERE pk IN (${user_pk_list.join()}) `);
+        user_count = user_count?.result[0];
+        user_count = user_count['COUNT(*)'];
+        user_count = makeMaxPage(user_count, 10);
+    }
+    let user_list = [];
+    if (user_pk_list.length > 0) {
+        let api_str = `SELECT * FROM user_table WHERE pk IN (${user_pk_list.join()}) `;
+        if(page){
+            api_str += `LIMIT ${(page - 1) * 10}, 10`
+        }   
+        user_list = await dbQueryList(api_str);
+        user_list = user_list?.result;
+    }
+    return {
+        user_list,
+        user_count
+    }
+}
 module.exports = {
-    listFormatBySchema, sqlJoinFormat, myItemSqlJoinFormat
+    listFormatBySchema, sqlJoinFormat, myItemSqlJoinFormat,
+    getCustomInfoReturn
 };
 // const sqlJoinFormat = (schema, sql_, page_sql_) => {
 //     let sql = sql_;

@@ -38,7 +38,7 @@ const pwBytes = 64
 const jwtSecret = "djfudnsqlalfKeyFmfRkwu"
 const { format, formatDistance, formatRelative, subDays } = require('date-fns')
 const geolocation = require('geolocation')
-const { sqlJoinFormat, listFormatBySchema, myItemSqlJoinFormat } = require('../format/formats')
+const { sqlJoinFormat, listFormatBySchema, myItemSqlJoinFormat, getCustomInfoReturn } = require('../format/formats')
 const { param } = require('jquery')
 const kakaoOpt = {
     clientId: '4a8d167fa07331905094e19aafb2dc47',
@@ -50,7 +50,7 @@ const PAY_ADDRESS = {
 }
 const PAY_INFO = {//빌키인증 정보
     SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,//빌키 sign 키
-    CERTIFICATION_SIGN_KEY:'QjZXWDZDRmxYUXJPYnMvelEvSjJ5QT09',//인증 sign키
+    CERTIFICATION_SIGN_KEY: 'QjZXWDZDRmxYUXJPYnMvelEvSjJ5QT09',//인증 sign키
     MID: `wpaybill01`,
     API_IV: `1111111111111111`,
     API_KEY: `11111111111111111111111111111111`
@@ -129,7 +129,7 @@ const getHomeContent = async (req, res) => {
             { table: 'notice', sql: 'SELECT notice_table.*, user_table.nickname FROM notice_table LEFT JOIN user_table ON notice_table.user_pk=user_table.pk WHERE notice_table.status=1 ORDER BY notice_table.sort DESC LIMIT 2', type: 'list' },
             { table: 'setting', sql: 'SELECT * FROM setting_table', type: 'obj' },
             { table: 'contract', sql: `SELECT * FROM v_contract ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
-            { table: 'point', sql: `${sqlJoinFormat('point').sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
+            { table: 'point', sql: `${(await sqlJoinFormat('point', '', '', '', 'WHERE 1=1', decode))?.sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} ${decode?.user_level == 5 ? landlord_sql : ''} ORDER BY pk DESC LIMIT 5`, type: 'list' },
         ];
         for (var i = 0; i < sql_list.length; i++) {
@@ -284,38 +284,18 @@ const getCustomInfo = async (req, res) => {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
         const { level, page } = req.query;
-        let my_contracts = await dbQueryList(`SELECT * FROM contract_table WHERE ${getEnLevelByNum(decode?.user_level)}_pk=${decode?.pk} ORDER by pk DESC`);
-        my_contracts = my_contracts?.result;
-        let user_pk_list = my_contracts.map((item) => {
-            return item[`${getEnLevelByNum(level)}_pk`]
-        })
-        user_pk_list = new Set(user_pk_list);
-        user_pk_list = [...user_pk_list];
-        user_pk_list = user_pk_list.filter(
-            (element, i) => element
-        );
+        let data = await getCustomInfoReturn(decode, level, page);
 
-        let user_count = 0;
-        if (user_pk_list.length > 0) {
-            user_count = await dbQueryList(`SELECT COUNT(*) FROM user_table WHERE pk IN (${user_pk_list.join()}) `);
-            user_count = user_count?.result[0];
-            user_count = user_count['COUNT(*)'];
-            user_count = makeMaxPage(user_count, 10);
-        }
-        let user_list = [];
-        if (user_pk_list.length > 0) {
-            user_list = await dbQueryList(`SELECT * FROM user_table WHERE pk IN (${user_pk_list.join()}) LIMIT ${(page - 1) * 10}, 10`);
-            user_list = user_list?.result;
-        }
         return response(req, res, 100, "success", {
-            data: user_list,
-            maxPage: user_count
+            data: data?.user_list,
+            maxPage: data?.user_count
         });
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+
 const getMyPays = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 0);
@@ -387,7 +367,7 @@ const onPayByDirect = async (req, res) => {
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
             pay = pay?.result[0];
 
-            let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
+            let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
                 let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
@@ -396,6 +376,13 @@ const onPayByDirect = async (req, res) => {
                     pay?.pay_category,
                     pay[`${getEnLevelByNum(0)}_pk`],
                     item_pk
+                ])
+                let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+                    pay[`${getEnLevelByNum(10)}_pk`],
+                    item_pk,
+                    contract?.commission_percent,
+                    parseInt(pay?.price) * (contract?.commission_percent) / 100,
+                    1,
                 ])
             } else if (pay?.pay_category == 2) {
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
@@ -463,7 +450,7 @@ const onPayResult = async (req, res) => {
             let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
             pay = pay?.result[0];
 
-            let contract = await dbQueryList(`SELECT * FROM contract_table WHERE pk=${pay?.contract_pk}`);
+            let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay?.contract_pk}`);
             contract = contract?.result[0];
             if (pay?.pay_category == 0) {
                 let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
@@ -472,6 +459,13 @@ const onPayResult = async (req, res) => {
                     pay?.pay_category,
                     pay[`${getEnLevelByNum(0)}_pk`],
                     pay_pk
+                ])
+                let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+                    pay[`${getEnLevelByNum(10)}_pk`],
+                    pay_pk,
+                    contract?.commission_percent,
+                    parseInt(pay?.price) * (contract?.commission_percent) / 100,
+                    1,
                 ])
             } else if (pay?.pay_category == 2) {
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
@@ -537,14 +531,14 @@ const onPayCancelByDirect = async (req, res) => {
         let mid = pay_item?.mid || PAY_INFO.MID//PAY_INFO.MID;
         let signKey = ''
 
-        if(mid == PAY_INFO.MID){
+        if (mid == PAY_INFO.MID) {
             signKey = PAY_INFO.SIGN_KEY
-        }else{
+        } else {
             signKey = PAY_INFO.CERTIFICATION_SIGN_KEY
         }
         let mkey = await Buffer.from(crypto.createHash('sha256').update(signKey).digest('hex')).toString();
         let tid = pay_item?.transaction_num;
-        let price = pay_item?.price*((100+pay_item?.card_percent)/100);
+        let price = pay_item?.price * ((100 + pay_item?.card_percent) / 100);
         let currency = 'WON';
         let return_moment = returnMoment();
         return_moment = return_moment.replaceAll('-', '');
@@ -571,38 +565,49 @@ const onPayCancelByDirect = async (req, res) => {
         let headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
         }
-        console.log(obj)
-        const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
         await db.beginTransaction();
         console.log(resp)
+        let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
+        let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
+        let result = await activeQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+            pay_item?.landlord_pk,
+            pay_item?.lessee_pk,
+            pay_item?.realtor_pk,
+            (pay_item?.price) * (-1),
+            pay_item?.pay_category,
+            -1,
+            pay_item?.contract_pk,
+            pay_item?.day,
+            cancel_date,
+            cancel_day,
+            pay_item?.transaction_num
+        ])
+        let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
+        pay = pay?.result[0];
+        let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
+        setting = setting?.result[0];
+        let point = await dbQueryList(`SELECT * FROM point_table WHERE pay_pk=? AND status=1 `, [item_pk]);
+        point = point?.result[0];
+        let commission = await dbQueryList(`SELECT * FROM commission_table WHERE pay_pk=? AND status=1 `, [item_pk]);
+        commission = commission?.result[0];
+        let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+            point?.price * (-1),
+            -1,
+            pay?.pay_category,
+            pay[`${getEnLevelByNum(0)}_pk`],
+            item_pk
+        ])
+        let delete_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+            pay[`${getEnLevelByNum(10)}_pk`],
+            item_pk,
+            0,
+            commission?.price * (-1),
+            -1
+        ])
+        let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
+        const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
         if (resp?.ResultCode == '00') {
-            let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
-            let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
-            let result = await activeQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-                pay_item?.landlord_pk,
-                pay_item?.lessee_pk,
-                pay_item?.realtor_pk,
-                (pay_item?.price) * (-1),
-                pay_item?.pay_category,
-                -1,
-                pay_item?.contract_pk,
-                pay_item?.day,
-                cancel_date,
-                cancel_day,
-                pay_item?.transaction_num
-            ])
-            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
-            pay = pay?.result[0];
-            let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
-            setting = setting?.result[0];
-            let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
-                parseInt(pay?.price) * (setting?.point_percent) / 100 * (-1),
-                -1,
-                pay?.pay_category,
-                pay[`${getEnLevelByNum(0)}_pk`],
-                item_pk
-            ])
-            let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
+
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -658,9 +663,7 @@ const onPay = async (user, pay_item) => {
     const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/billing/billpay`, query, headers);
     return { ...resp, oid: oid };
 }
-const onPayCancel = () => {
 
-}
 //빌키생성, 빌키승인(결제), 결제취소, 빌키삭제
 const createBillKey = async (decode, body) => {
     let mid = PAY_INFO.MID;
