@@ -349,6 +349,39 @@ const onPayByDirect = async (req, res) => {
             return response(req, res, -150, "이미 결제 하였습니다.", []);
         }
         await db.beginTransaction();
+        let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay_item?.contract_pk}`);
+        contract = contract?.result[0];
+        if (pay_item?.pay_category == 0) {
+            let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+                parseInt(pay_item?.price) * (setting?.point_percent) / 100,
+                1,
+                pay_item?.pay_category,
+                pay_item[`${getEnLevelByNum(0)}_pk`],
+                item_pk
+            ])
+            let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
+                pay_item[`${getEnLevelByNum(10)}_pk`],
+                item_pk,
+                contract?.commission_percent,
+                parseInt(pay_item?.price) * (contract?.commission_percent) / 100,
+                1,
+            ])
+        } else if (pay_item?.pay_category == 2) {
+            let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+                contract[`${getEnLevelByNum(0)}_pk`],
+                contract[`${getEnLevelByNum(5)}_pk`],
+                contract[`${getEnLevelByNum(10)}_pk`],
+                parseInt(contract?.deposit) * 9,
+                1,
+                0,
+                pay_item?.contract_pk,
+                returnMoment().substring(0, 10)
+            ])
+        } else if (pay_item?.pay_category == 1) {
+            let result = await activeQuery(`UPDATE contract_table SET is_deposit_com=1 WHERE pk=${pay_item?.contract_pk}`);
+            let result2 = await initialPay(contract);
+        }
+
         let resp = await onPay(user, pay_item);
         if (resp?.ResultCode == '00') {
             let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
@@ -364,41 +397,7 @@ const onPayByDirect = async (req, res) => {
                 setting?.card_percent,
                 item_pk
             ])
-            let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
-            pay = pay?.result[0];
 
-            let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE pk=${pay?.contract_pk}`);
-            contract = contract?.result[0];
-            if (pay?.pay_category == 0) {
-                let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
-                    parseInt(pay?.price) * (setting?.point_percent) / 100,
-                    1,
-                    pay?.pay_category,
-                    pay[`${getEnLevelByNum(0)}_pk`],
-                    item_pk
-                ])
-                let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
-                    pay[`${getEnLevelByNum(10)}_pk`],
-                    item_pk,
-                    contract?.commission_percent,
-                    parseInt(pay?.price) * (contract?.commission_percent) / 100,
-                    1,
-                ])
-            } else if (pay?.pay_category == 2) {
-                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
-                    contract[`${getEnLevelByNum(0)}_pk`],
-                    contract[`${getEnLevelByNum(5)}_pk`],
-                    contract[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(contract?.deposit) * 9,
-                    1,
-                    0,
-                    pay?.contract_pk,
-                    returnMoment().substring(0, 10)
-                ])
-            } else if (pay?.pay_category == 1) {
-                let result = await activeQuery(`UPDATE contract_table SET is_deposit_com=1 WHERE pk=${pay?.contract_pk}`);
-                let result2 = await initialPay(contract);
-            }
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -565,40 +564,25 @@ const onPayCancelByDirect = async (req, res) => {
         let headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
         }
+
         await db.beginTransaction();
-        console.log(resp)
-        let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
-        let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
-        let result = await activeQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-            pay_item?.landlord_pk,
-            pay_item?.lessee_pk,
-            pay_item?.realtor_pk,
-            (pay_item?.price) * (-1),
-            pay_item?.pay_category,
-            -1,
-            pay_item?.contract_pk,
-            pay_item?.day,
-            cancel_date,
-            cancel_day,
-            pay_item?.transaction_num
-        ])
-        let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [item_pk]);
-        pay = pay?.result[0];
+
         let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
         setting = setting?.result[0];
         let point = await dbQueryList(`SELECT * FROM point_table WHERE pay_pk=? AND status=1 `, [item_pk]);
         point = point?.result[0];
         let commission = await dbQueryList(`SELECT * FROM commission_table WHERE pay_pk=? AND status=1 `, [item_pk]);
         commission = commission?.result[0];
+
         let delete_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
             point?.price * (-1),
             -1,
-            pay?.pay_category,
-            pay[`${getEnLevelByNum(0)}_pk`],
+            pay_item?.pay_category,
+            pay_item[`${getEnLevelByNum(0)}_pk`],
             item_pk
         ])
         let delete_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status) VALUES (?, ?, ?, ?, ?)`, [
-            pay[`${getEnLevelByNum(10)}_pk`],
+            pay_item[`${getEnLevelByNum(10)}_pk`],
             item_pk,
             0,
             commission?.price * (-1),
@@ -606,8 +590,23 @@ const onPayCancelByDirect = async (req, res) => {
         ])
         let update_pay = await activeQuery(`UPDATE pay_table SET is_want_cancel=-1 WHERE pk=?`, [item_pk]);
         const { data: resp } = await axios.post(`${PAY_ADDRESS.TEST}/cancel/cancel`, query, headers);
-        if (resp?.ResultCode == '00') {
+        let cancel_day = `${resp?.CancelDate.substring(0, 4)}-${resp?.CancelDate.substring(4, 6)}-${resp?.CancelDate.substring(6, 8)}`;
+        let cancel_date = `${cancel_day} ${resp?.CancelTime.substring(0, 2)}:${resp?.CancelTime.substring(2, 4)}:${resp?.CancelTime.substring(4, 6)}`
 
+        if (resp?.ResultCode == '00') {
+            let result = await activeQuery(`INSERT INTO pay_table (landlord_pk, lessee_pk, realtor_pk, price, pay_category, status, contract_pk, day, trade_date, trade_day, transaction_num ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+                pay_item?.landlord_pk,
+                pay_item?.lessee_pk,
+                pay_item?.realtor_pk,
+                (pay_item?.price) * (-1),
+                pay_item?.pay_category,
+                -1,
+                pay_item?.contract_pk,
+                pay_item?.day,
+                cancel_date,
+                cancel_day,
+                pay_item?.transaction_num
+            ])
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
