@@ -224,8 +224,7 @@ const onSignUp = async (req, res) => {
         let result = await activeQuery(`INSERT INTO user_table (${insertKeys.join()}) VALUES (${getQuestions(insertKeys.length).join()})`, insertValues);
         let result2 = await activeQuery("UPDATE user_table SET sort=? WHERE pk=?", [result?.result?.insertId, result?.result?.insertId]);
         await db.commit();
-        return response(req, res, 200, result_msg, []);
-
+        return response(req, res, 200, result_msg, {...insert_obj, pk: result?.result?.insertId});
     } catch (err) {
         console.log(err);
         await db.rollback();
@@ -827,6 +826,7 @@ const updateUser = async (req, res) => {
         const user_level = req.body.user_level ?? 0;
         const address_detail = req.body.address_detail ?? "";
         const zip_code = req.body.zip_code ?? "";
+        const status = req.body.status ?? 0;
 
         const office_name = req.body.office_name ?? "";
         const commission_percent = req.body.commission_percent ?? 1;
@@ -851,6 +851,7 @@ const updateUser = async (req, res) => {
             id_number,
             address,
             user_level,
+            status,
             address_detail,
             zip_code,
             office_name,
@@ -1271,6 +1272,11 @@ const updateItem = async (req, res) => {
 const updatePlusUtil = async (schema, body) => {
     if (schema == 'academy_category') {
         let result = await activeQuery(`UPDATE subscribe_table SET end_date=? WHERE academy_category_pk=?`, [body?.end_date, body?.pk]);
+    }
+    if (schema == 'setting') {
+        if(body?.commission_percent){
+            let result = await activeQuery(`UPDATE user_table SET commission_percent=? WHERE user_level=10`, [body?.commission_percent]); 
+        }
     }
 }
 
@@ -1720,7 +1726,12 @@ const getItems = async (req, res) => {
         if (start_date && end_date) {
             whereStr += ` AND (${table_name}.date BETWEEN '${start_date} 00:00:00' AND '${end_date} 23:59:59' )`;
         }
-
+        if (start_date && !end_date) {
+            whereStr += ` AND ${table_name}.date >= '${start_date} 00:00:00' `;
+        }
+        if (!start_date && end_date) {
+            whereStr += ` AND ${table_name}.date <= '${end_date} 23:59:59' `;
+        }
         if (keyword) {
             if (keyword_columns?.length > 0) {
                 whereStr += " AND (";
