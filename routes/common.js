@@ -14,7 +14,7 @@ const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
     isNotNullOrUndefined, namingImagesPath, nullResponse,
     lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber,
     categoryToNumber, sendAlarm, makeMaxPage, queryPromise, makeHash, commarNumber, getKewordListBySchema,
-    getQuestions, initialPay, initialDownPayment
+    getQuestions, initialDownPayment
 } = require('../util')
 const {
     getRowsNumWithKeyword, getRowsNum, getAllDatas,
