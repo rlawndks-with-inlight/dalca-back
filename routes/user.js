@@ -149,7 +149,6 @@ const getHomeContent = async (req, res) => {
         for (var i = 0; i < (await result).length; i++) {
             result_obj[(await result[i])?.table] = (await result[i])?.data;
         }
-        console.log(result_obj['point'])
         result_obj['point'] = listFormatBySchema('point', result_obj['point'])
         return response(req, res, 100, "success", result_obj)
 
