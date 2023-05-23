@@ -1619,7 +1619,6 @@ const getOptionObjBySchema = async (schema, whereStr, decode, body) => {
         } else {
             api_str += whereStr
         }
-
         let pay_sum = await dbQueryList(api_str);
         pay_sum = pay_sum?.result[0];
         obj['pay_sum'] = {
@@ -1744,7 +1743,6 @@ const getItems = async (req, res) => {
         if (!page_cut) {
             page_cut = 15;
         }
-
         sql = (await sqlJoinFormat(table, sql, order, pageSql)).sql;
         pageSql = (await sqlJoinFormat(table, sql, order, pageSql)).page_sql;
         order = (await sqlJoinFormat(table, sql, order, pageSql)).order;
@@ -1759,10 +1757,8 @@ const getItems = async (req, res) => {
             let get_result = await getItemsReturnBySchema(sql, pageSql, table, body, decode);
             let page_result = get_result?.page_result;
             let result = get_result?.result;
-
             let want_use_count = ['user', 'comment'];
             result = await listFormatBySchema(table, result);
-
             let maxPage = page_result[0]['COUNT(*)'] % page_cut == 0 ? (page_result[0]['COUNT(*)'] / page_cut) : ((page_result[0]['COUNT(*)'] - page_result[0]['COUNT(*)'] % page_cut) / page_cut + 1);
             let option_obj = await getOptionObjBySchema(table, whereStr, decode, body);
             if (want_use_count.includes(table)) {

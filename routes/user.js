@@ -91,10 +91,10 @@ const updateContract = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        const { deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pk, document_src, pdf_list } = req.body;
+        const { deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, end_date, pay_day, pk, document_src, pdf_list } = req.body;
 
-        let value_str = "deposit=?, down_payment=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, pay_day=?, pdf_list=? ";
-        let value_list = [deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, pay_day, pdf_list];
+        let value_str = "deposit=?, down_payment=?, monthly=?, brokerage_fee=?, address=?, address_detail=?, zip_code=? , start_date=?, end_date=?, pay_day=?, pdf_list=? ";
+        let value_list = [deposit, down_payment, monthly, brokerage_fee, address, address_detail, zip_code, start_date, end_date, pay_day, pdf_list];
         if (document_src) {
             if (document_src == -1) {
                 value_list.push('')
@@ -638,8 +638,8 @@ const onPay = async (user, pay_item, setting) => {
     let oid = `${pay_item?.pk}${user?.pk}${return_moment}`;
     let price = parseInt(pay_item?.price);
     let buyerName = user?.name;
-    
-    let billkey = user?.bill_key ;
+
+    let billkey = user?.bill_key;
     let timestamp = return_moment;
     let signature = {
         mid: mid,
@@ -875,6 +875,28 @@ const registerAutoCard = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const cancelAutoCard = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        if (!decode) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        const { user_pk } = req.body;
+        let user_pk_ = decode?.pk
+        if (user_pk && decode?.user_level >= 40) {
+            user_pk_ = user_pk;
+        }
+        await db.beginTransaction();
+        let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
+        
+        await db.commit();
+        return response(req, res, 100, "success", []);
+    } catch (err) {
+        console.log(err)
+        await db.rollback();
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
 const getMyAutoCard = async (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 0)
@@ -990,5 +1012,5 @@ module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
-    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo, onPay
+    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
 };
