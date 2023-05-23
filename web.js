@@ -36,7 +36,7 @@ const schedule = require('node-schedule');
 const path = require('path');
 const { activeQuery } = require('./query-util')
 const { sendAligoSms } = require('./routes/common')
-const { getMyAutoCardReturn } = require('./routes/user')
+const { getMyAutoCardReturn, onPay } = require('./routes/user')
 app.set('/routes', __dirname + '/routes');
 app.use('/config', express.static(__dirname + '/config'));
 //app.use('/image', express.static('./upload'));
@@ -110,6 +110,9 @@ const scheduleSystem = () => {
                                 let return_moment_list = return_moment.substring(0, 10).split('-');
                                 let pay_day = parseInt(return_moment_list[2]);
 
+                                let setting = await dbQueryList(`SELECT * FROM setting_table `);
+                                setting = setting?.result[0];
+
                                 let contracts = await dbQueryList(`SELECT * FROM v_contract WHERE end_date >= '${return_moment.substring(0, 10)}' AND is_deposit_com=1`);
                                 contracts = contracts?.result;
                                 let pays = await dbQueryList(`SELECT contract_pk, MAX(day) as max_day FROM v_pay WHERE pay_category=0 group by contract_pk`);
@@ -120,8 +123,21 @@ const scheduleSystem = () => {
                                 for (var i = 0; i < users.length; i++) {
                                         users_obj[users[i]?.pk] = users[i];
                                 }
-                                let send_message_list = [];
 
+                                let user_cards = await dbQueryList(`SELECT auto_card_table.*, user_card_table.bill_key AS bill_key FROM auto_card_table LEFT JOIN user_card_table ON auto_card_table.item_pk=user_card_table.pk `);
+                                user_cards = user_cards?.result;
+
+                                for (var i = 0; i < user_cards.length; i++) {
+                                        if (users_obj[user_cards[i]?.user_pk]) {
+                                                if (user_cards[i]?.item_pk > 0) {
+                                                        users_obj[user_cards[i]?.user_pk]['pay_bill_key'] = user_cards[i]?.bill_key;
+                                                } else if (user_cards[i]?.item_pk == 0) {
+                                                        users_obj[user_cards[i]?.user_pk]['pay_bill_key'] = users_obj[user_cards[i]?.user_pk]?.bill_key;
+                                                }
+                                        }
+                                }
+
+                                let send_message_list = [];
                                 let pay_obj = {};
                                 for (var i = 0; i < pays.length; i++) {
                                         pay_obj[`${pays[i]?.contract_pk}-${pays[i]?.max_day}`] = true;
@@ -154,60 +170,22 @@ const scheduleSystem = () => {
                                         }
 
                                         if (contracts[i]?.pay_day == pay_day && !pay_obj[`${contracts[i]?.pk}-${return_moment.substring(0, 10)}`] && contracts[i][`${getEnLevelByNum(0)}_appr`] == 1 && contracts[i][`${getEnLevelByNum(5)}_appr`] == 1) {
-                                                let user = users_obj[contracts[i][`${getEnLevelByNum(0)}_pk`]];
-                                                let card = await getMyAutoCardReturn(user);
-                                                user = { ...user, ...card };
-                                                let pay_one_list = [
+                                                pay_list.push([
                                                         contracts[i][`${getEnLevelByNum(0)}_pk`],
                                                         contracts[i][`${getEnLevelByNum(5)}_pk`],
                                                         contracts[i][`${getEnLevelByNum(10)}_pk`],
                                                         contracts[i][`monthly`],
                                                         0,
-                                                ]
-                                                if (user['auto_card']?.card_number) {
-                                                        let resp = await onPay(user, pay_item);
-                                                        if (resp?.ResultCode == '00') {
-                                                                let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
-                                                                let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
-                                                                pay_list.push([...pay_one_list, ...[
-                                                                        1,
-                                                                        contracts[i][`pk`],
-                                                                        return_moment.substring(0, 10),
-                                                                        1,
-                                                                        trade_date,
-                                                                        trade_day,
-                                                                        resp?.oid,
-                                                                        resp?.tid,
-                                                                        resp?.ApplNum,
-                                                                ]])
-                                                        } else {
-                                                                pay_list.push([...pay_one_list, ...[
-                                                                        0,
-                                                                        contracts[i][`pk`],
-                                                                        return_moment.substring(0, 10),
-                                                                        0,
-                                                                        '0000-00-00 00:00:99',
-                                                                        '0000-00-00',
-                                                                        '',
-                                                                        '',
-                                                                        '',
-                                                                ]])
-                                                        }
-
-                                                } else {
-                                                        pay_list.push([...pay_one_list, ...[
-                                                                0,
-                                                                contracts[i][`pk`],
-                                                                return_moment.substring(0, 10),
-                                                                0,
-                                                                '0000-00-00 00:00:99',
-                                                                '0000-00-00',
-                                                                '',
-                                                                '',
-                                                                '',
-                                                        ]])
-                                                }
-
+                                                        0,
+                                                        contracts[i][`pk`],
+                                                        return_moment.substring(0, 10),
+                                                        0,
+                                                        '0000-00-00 00:00:99',
+                                                        '0000-00-00',
+                                                        '',
+                                                        '',
+                                                        '',
+                                                ])
                                         }
                                 }
                                 //계약 만료 발송
@@ -217,9 +195,65 @@ const scheduleSystem = () => {
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
                                         let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day, is_auto, trade_date, trade_day, order_num, transaction_num, approval_num) VALUES ?`, [pay_list]);
+                                        let result_pay_list = await dbQueryList(`SELECT * FROM pay_table WHERE day='${return_moment.substring(0, 10)}' AND pay_category=0 AND status=0`);
+                                        result_pay_list = result_pay_list?.result;
                                         let send_message = `${return_moment.substring(0, 10)} 월세 납부 바랍니다.\n\n-달카페이-`;
-                                        for (var i = 0; i < pay_list.length; i++) {
-                                                let result2 = await sendAligoSms({ receivers: users_obj[pay_list[i][0]].phone, message: send_message })
+                                        let confirm_send_message = `${return_moment.substring(0, 10)} 월세 납부 완료 되었습니다.\n\n-달카페이-`;
+                                        for (var i = 0; i < result_pay_list.length; i++) {
+                                                if (!users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]?.pay_bill_key) {
+                                                        let result2 = await sendAligoSms({
+                                                                receivers: [users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone, formatPhoneNumber(users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone)],
+                                                                message: send_message
+                                                        })
+                                                } else {
+                                                        let pay_item = result_pay_list[i];
+
+                                                        users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]['bill_key'] = users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]?.pay_bill_key;
+                                                        let temp_price = pay_item['price'];
+                                                        pay_item['price'] = getMoneyByCardPercent(pay_item['price'], setting?.card_percent);
+                                                        let resp = await onPay(users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]], pay_item);
+                                                        if (resp?.ResultCode == '00') {
+                                                                try {
+                                                                        pay_item['price'] = temp_price;
+                                                                        await db.beginTransaction();
+                                                                        let trade_day = `${resp?.PayDate.substring(0, 4)}-${resp?.PayDate.substring(4, 6)}-${resp?.PayDate.substring(6, 8)}`;
+                                                                        let trade_date = `${trade_day} ${resp?.PayTime.substring(0, 2)}:${resp?.PayTime.substring(2, 4)}:${resp?.PayTime.substring(4, 6)}`
+                                                                        let update_pay = await activeQuery(`UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, card_percent=?, is_auto=1 WHERE pk=?`, [
+                                                                                trade_date,
+                                                                                trade_day,
+                                                                                resp?.oid,
+                                                                                resp?.tid,
+                                                                                resp?.ApplNum,
+                                                                                setting?.card_percent,
+                                                                                pay_item?.pk
+                                                                        ])
+                                                                        let insert_point = await activeQuery(`INSERT INTO point_table (price, status, type, user_pk, pay_pk) VALUES (?, ?, ?, ?, ?)`, [
+                                                                                parseInt(pay_item?.price) * (setting?.point_percent) / 100,
+                                                                                1,
+                                                                                pay_item?.pay_category,
+                                                                                pay_item[`${getEnLevelByNum(0)}_pk`],
+                                                                                pay_item?.pk
+                                                                        ])
+                                                                        let insert_commission = await activeQuery(`INSERT INTO commission_table (user_pk, pay_pk, percent, price, status, pay_user_pk) VALUES (?, ?, ?, ?, ?, ?)`, [
+                                                                                pay_item[`${getEnLevelByNum(10)}_pk`],
+                                                                                pay_item?.pk,
+                                                                                users_obj[pay_item[`${getEnLevelByNum(10)}_pk`]]?.commission_percent,
+                                                                                parseInt(pay_item?.price) * (users_obj[pay_item[`${getEnLevelByNum(10)}_pk`]]?.commission_percent) / 100,
+                                                                                1,
+                                                                                pay_item[`${getEnLevelByNum(0)}_pk`],
+                                                                        ])
+                                                                        await db.commit();
+                                                                        let result2 = await sendAligoSms({
+                                                                                receivers: [users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone, formatPhoneNumber(users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone)],
+                                                                                message: confirm_send_message
+                                                                        })
+                                                                } catch (err) {
+                                                                        console.log(err);
+                                                                        await db.rollback();
+                                                                }
+                                                        }
+
+                                                }
                                         }
                                 }
                         }
@@ -228,6 +262,13 @@ const scheduleSystem = () => {
 
         })
 
+}
+
+const getMoneyByCardPercent = (price_, percent_) => {
+        let price = parseFloat(price_);
+        let percent = parseFloat(percent_);
+
+        return price * (100 + percent) / 100;
 }
 const differenceTwoDate = (f_d_, s_d_) => {//두날짜의 시간차
         let f_d = new Date(f_d_).getTime();//큰시간

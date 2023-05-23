@@ -149,6 +149,7 @@ const getHomeContent = async (req, res) => {
         for (var i = 0; i < (await result).length; i++) {
             result_obj[(await result[i])?.table] = (await result[i])?.data;
         }
+        console.log(result_obj['point'])
         result_obj['point'] = listFormatBySchema('point', result_obj['point'])
         return response(req, res, 100, "success", result_obj)
 
@@ -267,12 +268,16 @@ const onChangeCard = async (req, res) => {
         if (create_bill_key?.result < 0) {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
+
+        await db.beginTransaction();
         let bill_key = create_bill_key?.data;
         let result = await activeQuery(`UPDATE user_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, bill_key=? WHERE pk=?`, [card_number, card_name, card_expire, card_cvc, card_password, birth, bill_key, pk]);
 
+        await db.commit();
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
@@ -472,7 +477,7 @@ const onPayResult = async (req, res) => {
                     contract[`${getEnLevelByNum(0)}_pk`],
                     contract[`${getEnLevelByNum(5)}_pk`],
                     contract[`${getEnLevelByNum(10)}_pk`],
-                    parseInt(contract?.deposit - contract?.down_payment) ,
+                    parseInt(contract?.deposit - contract?.down_payment),
                     1,
                     0,
                     pay?.contract_pk,
@@ -624,7 +629,7 @@ const onPayCancelByDirect = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const onPay = async (user, pay_item) => {
+const onPay = async (user, pay_item, setting) => {
     let mid = PAY_INFO.MID;
     let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
     let return_moment = returnMoment();
@@ -634,10 +639,8 @@ const onPay = async (user, pay_item) => {
     let oid = `${pay_item?.pk}${user?.pk}${return_moment}`;
     let price = parseInt(pay_item?.price);
     let buyerName = user?.name;
-    if (user?.name != user?.card_name) {
-        // return response(req, res, -100, "카드 소유자명과 회원정보가 일치하지 않습니다.", []);
-    }
-    let billkey = user?.bill_key;
+    
+    let billkey = user?.bill_key ;
     let timestamp = return_moment;
     let signature = {
         mid: mid,
@@ -767,6 +770,7 @@ const addFamilyCard = async (req, res) => {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
         let bill_key = create_bill_key?.data;
+        await db.beginTransaction();
         let result = await activeQuery(`
         INSERT INTO user_card_table (card_number,card_name,card_expire,card_cvc,card_password,birth,family_type,user_pk,card_src,phone,bill_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             card_number,
@@ -782,9 +786,11 @@ const addFamilyCard = async (req, res) => {
             bill_key
         ])
 
+        await db.commit();
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
@@ -810,6 +816,7 @@ const updateFamilyCard = async (req, res) => {
         if (create_bill_key?.result < 0) {
             return response(req, res, -100, create_bill_key?.data?.ResultMsg, [])
         }
+        await db.beginTransaction();
         let bill_key = create_bill_key?.data;
         let result = await activeQuery(`UPDATE user_card_table SET card_number=?, card_name=?, card_expire=?, card_cvc=?, card_password=?, birth=?, family_type=?, card_src=?, phone=?, bill_key=? WHERE pk=?
         `, [
@@ -825,9 +832,11 @@ const updateFamilyCard = async (req, res) => {
             bill_key,
             pk
         ])
+        await db.commit();
         return response(req, res, 100, "success", []);
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
@@ -982,5 +991,5 @@ module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
-    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo
+    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo, onPay
 };

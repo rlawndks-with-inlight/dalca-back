@@ -9,10 +9,10 @@ const listFormatBySchema = (schema, data_, body_) => {
     let option_list = {};
     if(schema == 'point'){
         for(var i=0;i<data.length;i++){
-           
+            console.log(data[i])
             if(data[i]?.type==0){//월세
                 if(data[i]?.status==1){
-                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 ${data[i]?.pay_day.substring(0, 7)} 월세 결제에 의해 발생`;
+                    data[i]['manager_note'] = `${commarNumber(data[i]?.contract_pk)}번 계약 ${(data[i]?.pay_day??"0000-00-00").substring(0, 7)} 월세 결제에 의해 발생`;
                     data[i]['user_note'] = `${data[i]?.pay_day.substring(0, 7)} 월세 결제에 의해 발생`;
                 }else{
                     data[i]['manager_note'] = `${data[i]?.pay_day.substring(0, 7)} 월세 결제취소에 의해 차감`;
