@@ -195,12 +195,12 @@ const scheduleSystem = () => {
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
                                         let next_pay_day = return_moment.substring(0, 10).split('-');
-                                        if(next_pay_day[1] == '12'){
-                                                next_pay_day[0] = parseInt(next_pay_day[0])+1;
+                                        if (next_pay_day[1] == '12') {
+                                                next_pay_day[0] = parseInt(next_pay_day[0]) + 1;
                                                 next_pay_day[1] = '01';
-                                        }else{
-                                                next_pay_day[1] = parseInt(next_pay_day[1])+1;
-                                                next_pay_day[1] = `${next_pay_day[1]<=9?'0':''}${next_pay_day[1]}`;                                              
+                                        } else {
+                                                next_pay_day[1] = parseInt(next_pay_day[1]) + 1;
+                                                next_pay_day[1] = `${next_pay_day[1] <= 9 ? '0' : ''}${next_pay_day[1]}`;
                                         }
                                         next_pay_day = `${next_pay_day[0]}-${next_pay_day[1]}-${next_pay_day[2]}`;
 
