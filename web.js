@@ -194,11 +194,21 @@ const scheduleSystem = () => {
                                 }
                                 //월세 입금 필요 추가
                                 if (pay_list.length > 0) {
+                                        let next_pay_day = return_moment.substring(0, 10).split('-');
+                                        if(next_pay_day[1] == '12'){
+                                                next_pay_day[0] = parseInt(next_pay_day[0])+1;
+                                                next_pay_day[1] = '01';
+                                        }else{
+                                                next_pay_day[1] = parseInt(next_pay_day[1])+1;
+                                                next_pay_day[1] = `${next_pay_day[1]<=9?'0':''}${next_pay_day[1]}`;                                              
+                                        }
+                                        next_pay_day = `${next_pay_day[0]}-${next_pay_day[1]}-${next_pay_day[2]}`;
+
                                         let result = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day, is_auto, trade_date, trade_day, order_num, transaction_num, approval_num) VALUES ?`, [pay_list]);
                                         let result_pay_list = await dbQueryList(`SELECT * FROM pay_table WHERE day='${return_moment.substring(0, 10)}' AND pay_category=0 AND status=0`);
                                         result_pay_list = result_pay_list?.result;
-                                        let send_message = `${return_moment.substring(0, 10)} 월세 납부 바랍니다.\n\n-달카페이-`;
-                                        let confirm_send_message = `${return_moment.substring(0, 10)} 월세 납부 완료 되었습니다.\n\n-달카페이-`;
+                                        let send_message = `오늘은 ${return_moment.substring(0, 10)} 월세 납부하는 날입니다.\n\n-달카페이-`;
+                                        let confirm_send_message = `${return_moment.substring(0, 10)} 월세 납부 완료 되었습니다.\n 다음 정기결제일은 ${next_pay_day}일 입니다. \n\n-달카페이-`;
                                         for (var i = 0; i < result_pay_list.length; i++) {
                                                 if (!users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]?.pay_bill_key) {
                                                         let result2 = await sendAligoSms({
