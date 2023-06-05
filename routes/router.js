@@ -6,7 +6,7 @@ const {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
+    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
 } = require('./common');
 const {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
@@ -67,6 +67,7 @@ router.post('/myitem', getMyItem);
 router.get('/getallposts', getAllPosts);
 router.get('/getuserstatistics', getUserStatistics);
 router.get('/gethomecontent', getHomeContent);
+router.get('/getbellcontent', getBellContent);
 router.get('/getheadercontent', getHeaderContent);
 router.get('/getmyinfo', getMyInfo);
 router.get('/customer-info', getCustomInfo);
@@ -75,7 +76,6 @@ router.post('/getaddressbytext', getAddressByText);
 router.post('/keyrecieve/:pk/:device', onKeyrecieve);
 router.get('/keyrecieve/:pk/:device', onKeyrecieve);
 
-router.get('/noti/kiwoom', onNotiKiwoom);
 router.post('/addcontract', addContract);
 router.post('/updatecontract', updateContract);
 router.post('/requestcontractappr', requestContractAppr);

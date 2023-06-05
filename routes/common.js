@@ -224,7 +224,7 @@ const onSignUp = async (req, res) => {
         let result = await activeQuery(`INSERT INTO user_table (${insertKeys.join()}) VALUES (${getQuestions(insertKeys.length).join()})`, insertValues);
         let result2 = await activeQuery("UPDATE user_table SET sort=? WHERE pk=?", [result?.result?.insertId, result?.result?.insertId]);
         await db.commit();
-        return response(req, res, 200, result_msg, {...insert_obj, pk: result?.result?.insertId});
+        return response(req, res, 200, result_msg, { ...insert_obj, pk: result?.result?.insertId });
     } catch (err) {
         console.log(err);
         await db.rollback();
@@ -1274,8 +1274,8 @@ const updatePlusUtil = async (schema, body) => {
         let result = await activeQuery(`UPDATE subscribe_table SET end_date=? WHERE academy_category_pk=?`, [body?.end_date, body?.pk]);
     }
     if (schema == 'setting') {
-        if(body?.commission_percent){
-            let result = await activeQuery(`UPDATE user_table SET commission_percent=? WHERE user_level=10`, [body?.commission_percent]); 
+        if (body?.commission_percent) {
+            let result = await activeQuery(`UPDATE user_table SET commission_percent=? WHERE user_level=10`, [body?.commission_percent]);
         }
     }
 }
@@ -2801,16 +2801,120 @@ const onKeyrecieve = async (req, res) => {
     }
 
 }
-
-
-const onNotiKiwoom = (req, res) => {
+const dateMinus = (num, date) => {//num 0: 오늘, num -1: 어제 , date->new Date() 인자로 받음
     try {
-        let { PAYMETHOD, CPID, DAOUTRX, ORDERNO, AMOUNT, PRODUCTNAME, SETTDATE, AUTHNO, RESERVEDSTRING, CARDCODE, CARDNAME, CARDNO } = req.query;
-        res.send("success");
+        var today = new Date();
+        if (num) {
+            let new_date = new Date(today.setDate(today.getDate() + num));
+            today = new_date;
+        }
+        if (date) {
+            today = date;
+        }
+        var year = today.getFullYear();
+        var month = ('0' + (today.getMonth() + 1)).slice(-2);
+        var day = ('0' + today.getDate()).slice(-2);
+        var dateString = year + '-' + month + '-' + day;
+        var hours = ('0' + today.getHours()).slice(-2);
+        var minutes = ('0' + today.getMinutes()).slice(-2);
+        var seconds = ('0' + today.getSeconds()).slice(-2);
+        var timeString = hours + ':' + minutes + ':' + seconds;
+        let moment = dateString + ' ' + timeString;
+        return moment;
     } catch (err) {
         console.log(err);
+        return false;
     }
 }
+
+const getBellContent = async (req, res) => {
+    try {
+
+        let three_day_ago = dateMinus(-3);
+        three_day_ago = `${three_day_ago.substring(0, 10)} 00:00:00`;
+        let result_list = [];
+        let sql_list = [
+            { table: 'user', sql: `SELECT * FROM user_table WHERE user_level=10 AND date>='${three_day_ago}' ORDER BY pk DESC `, type: 'list' },
+            { table: 'request', sql: `SELECT * FROM request_table WHERE date>='${three_day_ago}' ORDER BY pk DESC `, type: 'list' },
+            { table: 'pay_cancel', sql: `SELECT * FROM pay_table WHERE is_want_cancel IN(-1, 1) AND date>='${three_day_ago}' ORDER BY pk DESC `, type: 'list' },
+        ];
+        for (var i = 0; i < sql_list.length; i++) {
+            result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
+        }
+        for (var i = 0; i < result_list.length; i++) {
+            await result_list[i];
+        }
+        let result_obj = {};
+        for (var i = 0; i < sql_list.length; i++) {
+            result_list.push(queryPromise(sql_list[i].table, sql_list[i].sql, sql_list[i].type));
+        }
+        for (var i = 0; i < result_list.length; i++) {
+            await result_list[i];
+        }
+        let result = (await when(result_list));
+        for (var i = 0; i < (await result).length; i++) {
+            result_obj[(await result[i])?.table] = (await result[i])?.data;
+        }
+        let answer_list = [];
+        let bell_count = 0;
+        for (var i = 0; i < sql_list.length; i++) {
+            let table = sql_list[i].table
+            for (var j = 0; j < result_obj[table].length; j++) {
+                let item = result_obj[table][j];
+                if (table == 'user') {
+                    answer_list.push({
+                        note: `${item?.id} 공인중개사 ${item?.status == 1 ? '승인 완료 되었습니다.' : '승인 대기중입니다.'}`,
+                        link: `/manager/edit/user/${item?.pk}`,
+                        date: item?.date
+                    })
+                    if (item?.status != 1) {
+                        bell_count++;
+                    }
+                }
+                if (table == 'request') {
+                    answer_list.push({
+                        note: `'${item?.title}' 문의요청 ${item?.status == 1 ? '답변완료 되었습니다.' : '답변 대기중입니다.'}`,
+                        link: `/manager/edit/request/${item?.pk}`,
+                        date: item?.date
+                    })
+                    if (item?.status != 1) {
+                        bell_count++;
+                    }
+                }
+                if (table == 'pay_cancel') {
+                    answer_list.push({
+                        note: `결제취소 ${item?.is_want_cancel == 1 ? '요청 완료 되었습니다.' : '요청 들어왔습니다.'}`,
+                        link: `/manager/list/pay`,
+                        date: item?.date
+                    })
+                    if (item?.is_want_cancel != 1) {
+                        bell_count++;
+                    }
+                }
+            }
+        }
+        answer_list = await answer_list.sort(function (a, b) {
+            let x = a.date.toLowerCase();
+            let y = b.date.toLowerCase();
+            if (x > y) {
+                return -1;
+            }
+            if (x < y) {
+                return 1;
+            }
+            return 0;
+        });
+        return response(req, res, 100, "success", {
+            data: answer_list,
+            bell_count: bell_count
+        })
+
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+
 
 module.exports = {
     sendAligoSms,
@@ -2818,5 +2922,5 @@ module.exports = {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, onNotiKiwoom, editContract, editPay, getAddressByText
+    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
 };
