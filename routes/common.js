@@ -377,7 +377,7 @@ const getMyInfo = async (req, res) => {
 }
 const editMyInfo = async (req, res) => {
     try {
-        let { pw, nickname, newPw, phone, id, zip_code, address, address_detail, account_holder, bank_name, account_number, typeNum } = req.body;
+        let { pw, nickname, newPw, phone, id, zip_code, address, address_detail, typeNum } = req.body;
         const decode = checkLevel(req.cookies.token, 0)
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
@@ -393,10 +393,9 @@ const editMyInfo = async (req, res) => {
             return response(req, res, -100, "비밀번호가 일치하지 않습니다.", [])
         }
         if (typeNum == 0) {
-            let result = activeQuery("UPDATE user_table SET zip_code=?, address=?, address_detail=?, account_holder=?, bank_name=?, account_number=? WHERE pk=?", [zip_code, address, address_detail, account_holder, bank_name, account_number, decode?.pk]);
+            let result = activeQuery("UPDATE user_table SET zip_code=?, address=?, address_detail=? WHERE pk=?", [zip_code, address, address_detail, decode?.pk]);
             return response(req, res, 100, "success", []);
         } else {
-
             if (newPw) {
                 await crypto.pbkdf2(newPw, salt, saltRounds, pwBytes, 'sha512', async (err, decoded) => {
                     // bcrypt.hash(pw, salt, async (err, hash) => {
@@ -1625,6 +1624,11 @@ const getOptionObjBySchema = async (schema, whereStr, decode, body) => {
             title: '전체금액',
             content: `${commarNumber(pay_sum?.sum_price)}원`
         };
+    }
+    if (schema == 'point') {
+        let point_sum = await dbQueryList(`SELECT SUM(price) AS point FROM point_table WHERE user_pk=${decode?.pk??0}`);
+        point_sum = point_sum?.result[0]?.point??0;
+        obj['point_sum'] = point_sum;
     }
     return obj;
 }
