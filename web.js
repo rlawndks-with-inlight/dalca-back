@@ -215,9 +215,12 @@ const scheduleSystem = () => {
                                                                 receivers: [users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone, formatPhoneNumber(users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]].phone)],
                                                                 message: send_message
                                                         })
+                                                        let result3 = await sendAligoSms({
+                                                                receivers: [users_obj[result_pay_list[i][`${getEnLevelByNum(5)}_pk`]].phone, formatPhoneNumber(users_obj[result_pay_list[i][`${getEnLevelByNum(5)}_pk`]].phone)],
+                                                                message: send_message
+                                                        })
                                                 } else {
                                                         let pay_item = result_pay_list[i];
-
                                                         users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]['bill_key'] = users_obj[result_pay_list[i][`${getEnLevelByNum(0)}_pk`]]?.pay_bill_key;
                                                         let temp_price = pay_item['price'];
                                                         pay_item['price'] = getMoneyByCardPercent(pay_item['price'], setting?.card_percent);
