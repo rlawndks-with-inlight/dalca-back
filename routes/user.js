@@ -944,7 +944,7 @@ const makeNiceApiToken = async (req, res) => {
     try {
         let body = req.body;
         let front_url = 'https://dalcapay.com'
-        let base_url = 'https://www.niceapi.co.kr';
+        let base_url = 'https://svc.niceapi.co.kr:22001';
         let client_id = 'f8d4885b-492a-4a24-a6f1-ca5deac26090';
         let client_secret = 'b59f2a6ba445fcb52a161362c26df1bcc6b9776';
         let product_id = '2101979031'
