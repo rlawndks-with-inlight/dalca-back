@@ -1029,7 +1029,7 @@ const makeNiceApiToken = async (req, res) => {
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
         });
-        const enc_data = encrypted.toString();
+        const enc_data = encrypted.toString('base64');
         const hmacSha256 = hmac256(hmac_key, enc_data);
         const integrity_value = Buffer.from(hmacSha256, 'hex').toString('base64');
         const rtn = {
@@ -1046,7 +1046,6 @@ const makeNiceApiToken = async (req, res) => {
 const recieveNiceApiResult = (req, res) => {
     try {
         console.log(req.body)
-
         return response(req, res, 100, "sucess", {})
     } catch (err) {
         console.log(err)
