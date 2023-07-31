@@ -1017,7 +1017,7 @@ const makeNiceApiToken = async (req, res) => {
             sitecode: res_data.site_code,
             methodtype: 'post',
             popupyn: 'Y',
-            receivedata: '전달받고싶은내용',
+            receivedata: 'a=1',
         };
         console.log(data)
         data = JSON.stringify(data);
@@ -1046,6 +1046,8 @@ const makeNiceApiToken = async (req, res) => {
 const recieveNiceApiResult = (req, res) => {
     try {
         console.log(req.body)
+
+        return response(req, res, 100, "sucess", {})
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
