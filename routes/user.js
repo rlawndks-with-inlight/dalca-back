@@ -888,7 +888,7 @@ const cancelAutoCard = async (req, res) => {
         }
         await db.beginTransaction();
         let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
-        
+
         await db.commit();
         return response(req, res, 100, "success", []);
     } catch (err) {
@@ -940,36 +940,52 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
     }
     return result;
 }
-const getIdentificationInfo = async (req, res) => {
+const makeNiceApiToken = async (req, res) => {
     try {
-        let { level, name, phone, birth } = req.body;
-        let return_moment = returnMoment();
-        let datetime = return_moment.replaceAll('-', '').replaceAll(' ', '').replaceAll(':', '');
-        let mTxId = `${level}_${datetime}`;
-        let authHash = `${IDENTIFICATION_INFO.MID}${mTxId}${IDENTIFICATION_INFO.API_KEY}`
-        authHash = await Buffer.from(crypto.createHash('sha256').update(authHash).digest('hex')).toString();
-        let birth_year = birth.substring(0, 2);
-        let cur_year = return_moment.substring(2, 4);
-        if (cur_year >= birth_year) {
-            birth = '20' + birth;
+        let base_url = 'https://svc.niceapi.co.kr:22001';
+        let client_id = 'f8d4885b-492a-4a24-a6f1-ca5deac26090';
+        let client_secret = 'b59f2a6ba445fcb52a161362c26df1bcc6b9776';
+        let base64 = Buffer.from(client_id + ':' + client_secret, "utf8").toString('base64');
+        let config = {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Authorization': `Basic ${base64}`
+            }
+        };
+        const response = await axios.post(
+            `${base_url}/digital/niceid/oauth/oauth/token`,
+            'grant_type=client_credentials&scope=default',
+            config,
+        );
+        if (response.data.dataHeader.GW_RSLT_CD == '1200') {
+            let access_token = response.data.dataBody.access_token;
+            const auth = Buffer.from(`${access_token}:${Math.floor(Date.now() / 1000)}:${client_id}`).toString('base64');
+            const header = {
+                'Content-Type': 'application/json',
+                'Authorization': `bearer ${auth}`,
+                'client_id': client_id,
+            };
+            const req_dtim = new Date().toISOString().replace(/[-T:.Z]/g, '');
+            const req_no = `pc${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+            const post_in = {
+                req_dtim,
+                req_no,
+                enc_mode: '1',
+            };
+            const post = {
+                dataBody: post_in,
+            };
+            const post_en = JSON.stringify(post);
+            const res_token = await axios.post(
+                `${base_url}/digital/niceid/api/v1.0/common/crypto/token`, 
+                post_en, 
+                { headers: header },
+            );
+            console.log(res_token?.data?.dataHeader)
+            console.log(123)
         } else {
-            birth = '19' + birth;
+            return response(req, res, -100, "서버 에러 발생", [])
         }
-        let userHash = `${name}${IDENTIFICATION_INFO.MID}${phone}${mTxId}${birth}01`;
-        userHash = await Buffer.from(crypto.createHash('sha256').update(userHash).digest('hex')).toString();
-        let obj = {
-            mid: IDENTIFICATION_INFO.MID,
-            reqSvcCd: '01',
-            mTxId: mTxId,
-            authHash: authHash,
-            flgFixedUser: 'Y',
-            userName: name,
-            userPhone: phone,
-            userBirth: birth,
-            userHash: userHash,
-            reservedMsg: 'isUseToken=Y'
-        }
-        return response(req, res, 100, "success", obj);
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
@@ -1012,5 +1028,5 @@ module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
-    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
+    makeNiceApiToken, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
 };

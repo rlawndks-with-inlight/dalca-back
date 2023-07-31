@@ -11,8 +11,8 @@ const {
 const {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
-    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus, 
-    getIdentificationInfo, returnIdentificationUrl, getCardIdentificationInfo, cancelAutoCard
+    addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
+    makeNiceApiToken, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
 } = require('./user');
 const image_list = [
     { name: 'master' },
@@ -114,7 +114,7 @@ router.post('/registerautocard', registerAutoCard);
 router.post('/cancelautocard', cancelAutoCard);
 router.get('/myautocard', getMyAutoCard);
 router.post('/changepaystatus', onChangePayStatus);
-router.post('/gii', getIdentificationInfo);
+router.post('/nice-token', makeNiceApiToken);
 router.post('/returnidurl', returnIdentificationUrl);
 router.post('/gcii', getCardIdentificationInfo);
 
