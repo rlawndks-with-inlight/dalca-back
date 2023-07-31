@@ -1015,7 +1015,7 @@ const makeNiceApiToken = async (req, res) => {
             requestno: req_no,
             returnurl: `${body?.return_url}`, // Replace with your actual return URL
             sitecode: res_data.site_code,
-            methodtype: 'get',
+            methodtype: 'post',
             popupyn: 'Y',
             receivedata: '전달받고싶은내용',
         };
@@ -1030,7 +1030,6 @@ const makeNiceApiToken = async (req, res) => {
           padding: CryptoJS.pad.Pkcs7
         });
         const enc_data = encrypted.toString();
-        console.log(enc_data)
         const hmacSha256 = hmac256(hmac_key, enc_data);
         const integrity_value = Buffer.from(hmacSha256, 'hex').toString('base64');
         const rtn = {
