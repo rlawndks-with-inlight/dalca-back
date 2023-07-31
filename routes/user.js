@@ -942,9 +942,12 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
 }
 const makeNiceApiToken = async (req, res) => {
     try {
+        let body = req.body;
+        let front_url = 'https://dalcapay.com'
         let base_url = 'https://svc.niceapi.co.kr:22001';
         let client_id = 'f8d4885b-492a-4a24-a6f1-ca5deac26090';
         let client_secret = 'b59f2a6ba445fcb52a161362c26df1bcc6b9776';
+        let product_id = '2101979031'
         let base64 = Buffer.from(client_id + ':' + client_secret, "utf8").toString('base64');
         let config = {
             headers: {
@@ -952,41 +955,80 @@ const makeNiceApiToken = async (req, res) => {
                 'Authorization': `Basic ${base64}`
             }
         };
-        const response = await axios.post(
+        const res_access_token = await axios.post(
             `${base_url}/digital/niceid/oauth/oauth/token`,
             'grant_type=client_credentials&scope=default',
             config,
         );
-        if (response.data.dataHeader.GW_RSLT_CD == '1200') {
-            let access_token = response.data.dataBody.access_token;
-            const auth = Buffer.from(`${access_token}:${Math.floor(Date.now() / 1000)}:${client_id}`).toString('base64');
-            const header = {
-                'Content-Type': 'application/json',
-                'Authorization': `bearer ${auth}`,
-                'client_id': client_id,
-                'ProductID': '0',
-            };
-            const req_dtim = new Date().toISOString().replace(/[-T:.Z]/g, '');
-            const req_no = `pc${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
-            const post_in = {
-                req_dtim,
-                req_no,
-                enc_mode: '1',
-            };
-            const post = {
-                dataBody: post_in,
-            };
-            const post_en = JSON.stringify(post);
-            const res_token = await axios.post(
-                `${base_url}/digital/niceid/api/v1.0/common/crypto/token`, 
-                post_en, 
-                { headers: header },
-            );
-            console.log(res_token?.data?.dataHeader)
-            console.log(123)
-        } else {
+        if (res_access_token.data.dataHeader.GW_RSLT_CD != '1200') {
             return response(req, res, -100, "서버 에러 발생", [])
         }
+        let access_token = res_access_token.data.dataBody.access_token;
+        const auth = Buffer.from(`${access_token}:${Math.floor(Date.now() / 1000)}:${client_id}`).toString('base64');
+        config = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `bearer ${auth}`,
+                'ProductID': product_id,
+            }
+        }
+        const req_dtim = new Date().toISOString().replace(/[-T:.Z]/g, '');
+        const req_no = `pc${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+        const post_in = {
+            req_dtim,
+            req_no,
+            enc_mode: '1',
+        };
+        console.log(post_in)
+        const post = {
+            dataHeader: { CNTY_CD: "ko" },
+            dataBody: post_in,
+        };
+        const post_en = JSON.stringify(post);
+        const res_token = await axios.post(
+            `${base_url}/digital/niceid/api/v1.0/common/crypto/token`,
+            post_en,
+            config,
+        );
+
+        if (res_token.data.dataHeader.GW_RSLT_CD != '1200') {
+            return response(req, res, -100, "서버 에러 발생", [])
+        }
+        const res_data = res_token.data.dataBody;
+        const _key = `${req_dtim}${req_no}${res_data.token_val}`;
+        const _key_hash = crypto.createHash('sha256').update(_key).digest();
+        const key = _key_hash.slice(0, 16);
+        const iv = _key_hash.slice(-16);
+    
+        const hmac_key = _key_hash.slice(0, 32);
+    
+        // You can store the key and iv in session like this in Node.js:
+        // req.session._nice_key = key.toString('base64');
+        // req.session._nice_iv = iv.toString('base64');
+    
+        const _data = {
+          requestno: req_no,
+          returnurl: `${front_url}/signup/${body?.level??0}`, // Replace with your actual return URL
+          sitecode: res_data.site_code,
+          methodtype: 'post',
+          popupyn: 'N',
+          receivedata: '전달받고싶은내용',
+        };
+        const data = JSON.stringify(_data);
+        const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+        let enc_data = cipher.update(data, 'utf8', 'base64');
+        enc_data += cipher.final('base64');
+    
+        const hmac = crypto.createHmac('sha256', hmac_key).update(enc_data).digest();
+        const intigrety_value = hmac.toString('base64');
+    
+        const rtn = {
+          token_version_id: res_data.token_version_id,
+          enc_data: enc_data,
+          integrity_value: intigrety_value,
+        };
+        
+        return response(req, res, 100, "sucess", rtn)
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
