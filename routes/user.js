@@ -947,8 +947,8 @@ function hmac256(secretKey, message) {
     const messageBytes = CryptoJS.enc.Utf8.parse(message);
     const hmacSha256 = CryptoJS.HmacSHA256(messageBytes, keyBytes);
     return hmacSha256.toString();
-  }
-  
+}
+
 const makeNiceApiToken = async (req, res) => {
     try {
         let body = req.body;
@@ -1023,11 +1023,11 @@ const makeNiceApiToken = async (req, res) => {
         data = JSON.stringify(data);
         const keyBytes = CryptoJS.enc.Utf8.parse(key);
         const ivBytes = CryptoJS.enc.Utf8.parse(iv);
-        
+
         const encrypted = CryptoJS.AES.encrypt(data, keyBytes, {
-          iv: ivBytes,
-          mode: CryptoJS.mode.CBC,
-          padding: CryptoJS.pad.Pkcs7
+            iv: ivBytes,
+            mode: CryptoJS.mode.CBC,
+            padding: CryptoJS.pad.Pkcs7
         });
         const enc_data = encrypted.toString();
         const hmacSha256 = hmac256(hmac_key, enc_data);
@@ -1038,6 +1038,14 @@ const makeNiceApiToken = async (req, res) => {
             integrity_value: integrity_value,
         };
         return response(req, res, 100, "sucess", rtn)
+    } catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
+const recieveNiceApiResult = (req, res) => {
+    try {
+        console.log(req.body)
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
@@ -1080,5 +1088,5 @@ module.exports = {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
     onChangeCard, getCustomInfo, getMyPays, onPayByDirect, onPayCancelByDirect, onPayResult, onWantPayCancel,
     addFamilyCard, updateFamilyCard, registerAutoCard, getMyAutoCard, getMyAutoCardReturn, onChangePayStatus,
-    makeNiceApiToken, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
+    makeNiceApiToken, recieveNiceApiResult, returnIdentificationUrl, getCardIdentificationInfo, onPay, cancelAutoCard
 };
