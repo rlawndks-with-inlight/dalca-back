@@ -6,6 +6,8 @@ router.use(cors())
 router.use(express.json())
 
 const crypto = require('crypto')
+const Base64Util = require('base64url');
+const CryptoJS = require('crypto-js')
 //const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const when = require('when')
@@ -940,10 +942,16 @@ const getMyAutoCardReturn = async (decode, auto_cards, family_cards, users) => {
     }
     return result;
 }
+function hmac256(secretKey, message) {
+    const keyBytes = CryptoJS.enc.Utf8.parse(secretKey);
+    const messageBytes = CryptoJS.enc.Utf8.parse(message);
+    const hmacSha256 = CryptoJS.HmacSHA256(messageBytes, keyBytes);
+    return hmacSha256.toString();
+  }
+  
 const makeNiceApiToken = async (req, res) => {
     try {
         let body = req.body;
-        let front_url = 'https://dalcapay.com'
         let base_url = 'https://svc.niceapi.co.kr:22001';
         let client_id = 'f8d4885b-492a-4a24-a6f1-ca5deac26090';
         let client_secret = 'b59f2a6ba445fcb52a161362c26df1bcc6b9776';
@@ -964,7 +972,8 @@ const makeNiceApiToken = async (req, res) => {
             return response(req, res, -100, "서버 에러 발생", [])
         }
         let access_token = res_access_token.data.dataBody.access_token;
-        const auth = Buffer.from(`${access_token}:${Math.floor(Date.now() / 1000)}:${client_id}`).toString('base64');
+        let current_timestamp = returnMoment().replaceAll(" ", "").replaceAll("-", "").replaceAll(":", "")
+        const auth = Buffer.from(`${access_token}:${current_timestamp}:${client_id}`).toString('base64');
         config = {
             headers: {
                 'Content-Type': 'application/json',
@@ -972,7 +981,7 @@ const makeNiceApiToken = async (req, res) => {
                 'ProductID': product_id,
             }
         }
-        const req_dtim = new Date().toISOString().replace(/[-T:.Z]/g, '');
+        const req_dtim = current_timestamp;
         const req_no = `pc${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
         const post_in = {
             req_dtim,
@@ -980,7 +989,7 @@ const makeNiceApiToken = async (req, res) => {
             enc_mode: '1',
         };
         const post = {
-            dataHeader: { CNTY_CD: "ko" },
+            dataHeader: { "CNTY_CD": "ko" },
             dataBody: post_in,
         };
         const post_en = JSON.stringify(post);
@@ -993,41 +1002,42 @@ const makeNiceApiToken = async (req, res) => {
         if (res_token.data.dataHeader.GW_RSLT_CD != '1200') {
             return response(req, res, -100, "서버 에러 발생", [])
         }
-        console.log(res_token.data.dataBody)
         const res_data = res_token.data.dataBody;
-        const _key = `${req_dtim}${req_no}${res_data.token_val}`;
-        const _key_hash = crypto.createHash('sha256').update(_key).digest();
-        const key = _key_hash.slice(0, 16);
-        const iv = _key_hash.slice(-16);
-    
-        const hmac_key = _key_hash.slice(0, 32);
-    
-        // You can store the key and iv in session like this in Node.js:
-        // req.session._nice_key = key.toString('base64');
-        // req.session._nice_iv = iv.toString('base64');
-    
-        const _data = {
-          requestno: req_no,
-          returnurl: `${front_url}/signup/${body?.level??0}`, // Replace with your actual return URL
-          sitecode: res_data.site_code,
-          methodtype: 'post',
-          popupyn: 'N',
-          receivedata: '전달받고싶은내용',
+        const value = `${req_dtim}${req_no}${res_data.token_val}`;
+        const md = crypto.createHash('sha256');
+        md.update(value);
+        const arrHashValue = md.digest();
+        const resultVal = arrHashValue.toString('base64');
+        const key = resultVal.slice(0, 16);
+        const iv = resultVal.slice(-16);
+        const hmac_key = resultVal.slice(0, 32);
+        let data = {
+            requestno: req_no,
+            returnurl: `${body?.return_url}`, // Replace with your actual return URL
+            sitecode: res_data.site_code,
+            methodtype: 'get',
+            popupyn: 'Y',
+            receivedata: '전달받고싶은내용',
         };
-        const data = JSON.stringify(_data);
-        const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
-        let enc_data = cipher.update(data, 'utf8', 'base64');
-        enc_data += cipher.final('base64');
-    
-        const hmac = crypto.createHmac('sha256', hmac_key).update(enc_data).digest();
-        const intigrety_value = hmac.toString('base64');
-    
+        console.log(data)
+        data = JSON.stringify(data);
+        const keyBytes = CryptoJS.enc.Utf8.parse(key);
+        const ivBytes = CryptoJS.enc.Utf8.parse(iv);
+        
+        const encrypted = CryptoJS.AES.encrypt(data, keyBytes, {
+          iv: ivBytes,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        });
+        const enc_data = encrypted.toString();
+        console.log(enc_data)
+        const hmacSha256 = hmac256(hmac_key, enc_data);
+        const integrity_value = Buffer.from(hmacSha256, 'hex').toString('base64');
         const rtn = {
-          token_version_id: res_data.token_version_id,
-          enc_data: enc_data,
-          integrity_value: intigrety_value,
+            token_version_id: res_data.token_version_id,
+            enc_data: enc_data,
+            integrity_value: integrity_value,
         };
-
         return response(req, res, 100, "sucess", rtn)
     } catch (err) {
         console.log(err)
