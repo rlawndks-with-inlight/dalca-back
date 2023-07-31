@@ -964,6 +964,7 @@ const makeNiceApiToken = async (req, res) => {
                 'Content-Type': 'application/json',
                 'Authorization': `bearer ${auth}`,
                 'client_id': client_id,
+                'ProductID': '0',
             };
             const req_dtim = new Date().toISOString().replace(/[-T:.Z]/g, '');
             const req_no = `pc${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
