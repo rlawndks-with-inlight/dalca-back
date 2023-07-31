@@ -979,7 +979,6 @@ const makeNiceApiToken = async (req, res) => {
             req_no,
             enc_mode: '1',
         };
-        console.log(post_in)
         const post = {
             dataHeader: { CNTY_CD: "ko" },
             dataBody: post_in,
@@ -994,6 +993,7 @@ const makeNiceApiToken = async (req, res) => {
         if (res_token.data.dataHeader.GW_RSLT_CD != '1200') {
             return response(req, res, -100, "서버 에러 발생", [])
         }
+        console.log(res_token.data.dataBody)
         const res_data = res_token.data.dataBody;
         const _key = `${req_dtim}${req_no}${res_data.token_val}`;
         const _key_hash = crypto.createHash('sha256').update(_key).digest();
@@ -1027,7 +1027,7 @@ const makeNiceApiToken = async (req, res) => {
           enc_data: enc_data,
           integrity_value: intigrety_value,
         };
-        
+
         return response(req, res, 100, "sucess", rtn)
     } catch (err) {
         console.log(err)
