@@ -1042,8 +1042,11 @@ const makeNiceApiToken = async (req, res) => { //nice api 요청
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+
 const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
     try {
+       
+
         let = { token_version_id, enc_data, integrity_value } = req.query;
 
 
@@ -1075,6 +1078,7 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
         resData = iconv.decode(Buffer.from(resData, 'hex'), 'euc-kr');
         resData = JSON.parse(resData);
         resData['receivedata'] = JSON.parse(resData?.receivedata);
+        
         let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`,[resData?.mobileno])
         find_phone = find_phone?.result;
         if(find_phone.length > 0){
