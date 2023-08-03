@@ -115,7 +115,7 @@ router.post('/cancelautocard', cancelAutoCard);
 router.get('/myautocard', getMyAutoCard);
 router.post('/changepaystatus', onChangePayStatus);
 router.post('/nice-token', makeNiceApiToken);
-router.post('/nice-result', recieveNiceApiResult);
+router.get('/nice-result', recieveNiceApiResult);
 router.post('/returnidurl', returnIdentificationUrl);
 router.post('/gcii', getCardIdentificationInfo);
 

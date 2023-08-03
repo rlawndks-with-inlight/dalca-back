@@ -11,7 +11,7 @@ const CryptoJS = require('crypto-js')
 //const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const when = require('when')
-let iconv = require('iconv-lite');
+const iconv = require('iconv-lite');
 const { checkLevel, getSQLnParams, getUserPKArrStrWithNewPK,
     isNotNullOrUndefined, namingImagesPath, nullResponse,
     lowLevelResponse, response, removeItems, returnMoment, formatPhoneNumber,
@@ -949,9 +949,9 @@ function hmac256(secretKey, message) {
     return hmacSha256.toString();
 }
 
-const makeNiceApiToken = async (req, res) => {
+const makeNiceApiToken = async (req, res) => { //nice api 요청
     try {
-        let body = req.body;
+        let { return_url, receive_data } = req.body;
         let base_url = 'https://svc.niceapi.co.kr:22001';
         let client_id = 'f8d4885b-492a-4a24-a6f1-ca5deac26090';
         let client_secret = 'b59f2a6ba445fcb52a161362c26df1bcc6b9776';
@@ -1013,23 +1013,22 @@ const makeNiceApiToken = async (req, res) => {
         const hmac_key = resultVal.slice(0, 32);
         let data = {
             requestno: req_no,
-            returnurl: `${body?.return_url}`, // Replace with your actual return URL
+            returnurl: `${return_url}`, // Replace with your actual return URL
             sitecode: res_data.site_code,
-            methodtype: 'post',
+            methodtype: 'get',
             popupyn: 'Y',
-            receivedata: 'a=1',
+            receivedata: receive_data,
         };
-        console.log(data)
         data = JSON.stringify(data);
         const keyBytes = CryptoJS.enc.Utf8.parse(key);
         const ivBytes = CryptoJS.enc.Utf8.parse(iv);
-
         const encrypted = CryptoJS.AES.encrypt(data, keyBytes, {
             iv: ivBytes,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
         });
         const enc_data = encrypted.toString();
+        let result = await activeQuery("INSERT INTO nice_api_table (key_val, iv, token_version_id) VALUES (?, ?, ?) ", [key, iv, res_data.token_version_id]);
         const hmacSha256 = hmac256(hmac_key, enc_data);
         const integrity_value = Buffer.from(hmacSha256, 'hex').toString('base64');
         const rtn = {
@@ -1043,10 +1042,48 @@ const makeNiceApiToken = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const recieveNiceApiResult = (req, res) => {
+const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
     try {
-        console.log(req.body)
-        return response(req, res, 100, "sucess", {})
+        let = { token_version_id, enc_data, integrity_value } = req.query;
+
+        console.log(token_version_id)
+
+        let key_info = await dbQueryList(`SELECT * FROM nice_api_table WHERE token_version_id=?`, [token_version_id]);
+        key_info = key_info?.result[0];
+        const key = key_info?.key_val; // 요청 시 암호화한 key와 동일
+        const iv = key_info?.iv; // 요청 시 암호화한 iv와 동일
+        console.log(key)
+        // Base64 decode the encrypted data
+        const cipherEnc = CryptoJS.enc.Base64.parse(enc_data);
+
+        // Convert the key and iv to WordArray using euc-kr encoding
+        const keyBytes = CryptoJS.enc.Utf8.parse(key, { asBytes: true });
+        const ivBytes = CryptoJS.enc.Utf8.parse(iv, { asBytes: true });
+
+        // Decryption
+        const decrypted = CryptoJS.AES.decrypt(
+            {
+                ciphertext: cipherEnc,
+            },
+            keyBytes,
+            {
+                iv: ivBytes,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7,
+            }
+        );
+        // Convert the decrypted data to "euc-kr" string using iconv-lite
+        let resData = iconv.decode(Buffer.from(decrypted.toString(), 'binary'), 'euc-kr');
+        resData = iconv.decode(Buffer.from(resData, 'hex'), 'euc-kr');
+        resData = JSON.parse(resData);
+        resData['receivedata'] = JSON.parse(resData?.receivedata);
+        let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`,[resData?.mobileno])
+        find_phone = find_phone?.result;
+        if(find_phone.length > 0){
+            return response(req, res, -100, "이미 가입된 휴대폰번호 입니다.", [])
+        }
+            return response(req, res, 100, "sucess", resData)
+       
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
