@@ -1046,13 +1046,11 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
     try {
         let = { token_version_id, enc_data, integrity_value } = req.query;
 
-        console.log(token_version_id)
 
         let key_info = await dbQueryList(`SELECT * FROM nice_api_table WHERE token_version_id=?`, [token_version_id]);
         key_info = key_info?.result[0];
         const key = key_info?.key_val; // 요청 시 암호화한 key와 동일
         const iv = key_info?.iv; // 요청 시 암호화한 iv와 동일
-        console.log(key)
         // Base64 decode the encrypted data
         const cipherEnc = CryptoJS.enc.Base64.parse(enc_data);
 
@@ -1082,8 +1080,16 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
         if(find_phone.length > 0){
             return response(req, res, -100, "이미 가입된 휴대폰번호 입니다.", [])
         }
+        if(resData?.receivedata?.device_type=='pc'){
             return response(req, res, 100, "sucess", resData)
-       
+        }else if(resData?.receivedata?.device_type=='mobile'){
+            resData['receivedata'] = JSON.stringify(resData?.receivedata);
+            return res.send(`
+            <script>
+            window.location.href = "/signup/0?${new URLSearchParams(resData)}"
+            </script>
+            `)
+        }
     } catch (err) {
         console.log(err)
         return response(req, res, -200, "서버 에러 발생", [])
