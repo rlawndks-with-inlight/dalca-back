@@ -1017,7 +1017,7 @@ const makeNiceApiToken = async (req, res) => { //nice api 요청
             sitecode: res_data.site_code,
             methodtype: 'get',
             popupyn: 'Y',
-            receivedata: receive_data,
+            receivedata: Buffer.from(receive_data, "utf8").toString('base64'),
         };
         data = JSON.stringify(data);
         const keyBytes = CryptoJS.enc.Utf8.parse(key);
@@ -1077,20 +1077,30 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
         let resData = iconv.decode(Buffer.from(decrypted.toString(), 'binary'), 'euc-kr');
         resData = iconv.decode(Buffer.from(resData, 'hex'), 'euc-kr');
         resData = JSON.parse(resData);
-        resData['receivedata'] = JSON.parse(resData?.receivedata);
+        resData['receivedata'] = JSON.parse(Buffer.from(resData?.receivedata, "base64").toString('utf8'));
+        console.log(resData)
         
         let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`,[resData?.mobileno])
         find_phone = find_phone?.result;
-        if(find_phone.length > 0){
-            return response(req, res, -100, "이미 가입된 휴대폰번호 입니다.", [])
-        }
+        // if(find_phone.length > 0){
+        //     if(resData?.receivedata?.device_type=='pc'){
+        //     return response(req, res, -100, "이미 가입된 휴대폰번호 입니다.", [])
+        // }else if(resData?.receivedata?.device_type=='mobile'){
+        //     resData['receivedata'] = JSON.stringify(resData?.receivedata);
+        //     return res.send(`
+        //     <script>
+        //     window.location.href = "/signup/0?${new URLSearchParams(resData)}"
+        //     </script>
+        //     `)
+        // }
+        // }
         if(resData?.receivedata?.device_type=='pc'){
             return response(req, res, 100, "sucess", resData)
         }else if(resData?.receivedata?.device_type=='mobile'){
             resData['receivedata'] = JSON.stringify(resData?.receivedata);
             return res.send(`
             <script>
-            window.location.href = "/signup/0?${new URLSearchParams(resData)}"
+            window.location.href = "/signup/0?${encodeURIComponent(new URLSearchParams(resData))}"
             </script>
             `)
         }
