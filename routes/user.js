@@ -722,12 +722,36 @@ const onChangePayStatus = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", []);
         }
-        const { pay_pk, status } = req.body;
-        let result = await activeQuery(`UPDATE pay_table SET status=${status} WHERE pk=${pay_pk}`);
+        const { pay_pk, status, type = 0 } = req.body;
+        await db.beginTransaction();
+        let result = await activeQuery(`UPDATE pay_table SET status=${status}, type=${type} WHERE pk=${pay_pk}`);
+        let pay = await dbQueryList(`SELECT * FROM pay_table WHERE pk=?`, [pay_pk]);
+        pay = pay?.result[0];
+        let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE contract_table.pk=${pay?.contract_pk}`);
+        contract = contract?.result[0];
+        if(pay?.status == 1){
+            if (pay?.pay_category == 2) {
+                let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
+                    contract[`${getEnLevelByNum(0)}_pk`],
+                    contract[`${getEnLevelByNum(5)}_pk`],
+                    contract[`${getEnLevelByNum(10)}_pk`],
+                    parseInt(contract?.deposit - contract?.down_payment),
+                    1,
+                    0,
+                    pay?.contract_pk,
+                    returnMoment().substring(0, 10)
+                ])
+            } else if (pay?.pay_category == 1) {
+                let result = await activeQuery(`UPDATE contract_table SET is_deposit_com=1 WHERE pk=${pay?.contract_pk}`);
+                let result2 = await initialPay(contract);
+            }
+        }
 
+        await db.commit();
         return response(req, res, 100, "success", [])
     } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
@@ -1045,7 +1069,7 @@ const makeNiceApiToken = async (req, res) => { //nice api 요청
 
 const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
     try {
-       
+
 
         let = { token_version_id, enc_data, integrity_value } = req.query;
 
@@ -1079,8 +1103,8 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
         resData = JSON.parse(resData);
         resData['receivedata'] = JSON.parse(Buffer.from(resData?.receivedata, "base64").toString('utf8'));
         console.log(resData)
-        
-        let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`,[resData?.mobileno])
+
+        let find_phone = await dbQueryList(`SELECT * FROM user_table WHERE phone=?`, [resData?.mobileno])
         find_phone = find_phone?.result;
         // if(find_phone.length > 0){
         //     if(resData?.receivedata?.device_type=='pc'){
@@ -1094,9 +1118,9 @@ const recieveNiceApiResult = async (req, res) => { //nice api 결과값 리턴
         //     `)
         // }
         // }
-        if(resData?.receivedata?.device_type=='pc'){
+        if (resData?.receivedata?.device_type == 'pc') {
             return response(req, res, 100, "sucess", resData)
-        }else if(resData?.receivedata?.device_type=='mobile'){
+        } else if (resData?.receivedata?.device_type == 'mobile') {
             resData['receivedata'] = JSON.stringify(resData?.receivedata);
             return res.send(`
             <script>

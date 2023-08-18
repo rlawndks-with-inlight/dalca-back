@@ -1626,8 +1626,8 @@ const getOptionObjBySchema = async (schema, whereStr, decode, body) => {
         };
     }
     if (schema == 'point') {
-        let point_sum = await dbQueryList(`SELECT SUM(price) AS point FROM point_table WHERE user_pk=${decode?.pk??0}`);
-        point_sum = point_sum?.result[0]?.point??0;
+        let point_sum = await dbQueryList(`SELECT SUM(price) AS point FROM point_table WHERE user_pk=${decode?.pk ?? 0}`);
+        point_sum = point_sum?.result[0]?.point ?? 0;
         obj['point_sum'] = point_sum;
     }
     return obj;
@@ -2416,22 +2416,35 @@ const updateSetting = (req, res) => {
     }
 }
 
-const updateStatus = (req, res) => {
+const updateStatus = async (req, res) => {
     try {
         const { table, pk, num, column } = req.body;
 
         let sql = `UPDATE ${table}_table SET ${column}=? WHERE pk=? `
-        db.query(sql, [num, pk], (err, result) => {
-            if (err) {
-                console.log(err)
-                return response(req, res, -200, "서버 에러 발생", [])
-            } else {
-                return response(req, res, 100, "success", [])
+        await db.beginTransaction();
+        let result = await activeQuery(sql, [num, pk]);
+        console.log('################')
+        console.log(num)
+        if (table == 'user' && num == 1) { // 공인중개서 승인시
+            let user = await dbQueryList(`SELECT * FROM ${table}_table WHERE pk=${pk}`);
+            user = user?.result[0];
+            let content = `달카페이 회원부동산으로 승인완료되었습니다.`
+            if(user?.user_level == 10){
+                let result = await sendAligoSms({ receivers: [user?.phone, formatPhoneNumber(user?.phone)], message: content });
+                if (result.result_code == '1') {
+                    await db.commit();
+                    return response(req, res, 100, "success", [])
+                } else {
+                    await db.rollback();
+                    return response(req, res, -100, result?.message, [])
+                }
             }
-        })
-    }
-    catch (err) {
+        }
+        await db.commit();
+        return response(req, res, 100, "success", [])
+    } catch (err) {
         console.log(err)
+        await db.rollback();
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
