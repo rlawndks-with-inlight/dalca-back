@@ -2333,19 +2333,25 @@ const getSetting = (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
-const deleteItem = (req, res) => {
+const deleteItem = async (req, res) => {
     try {
+        const decode = checkLevel(req.cookies.token, 40)
         let pk = req.body.pk ?? 0;
         let table = req.body.table ?? "";
-        let sql = `DELETE FROM ${table}_table WHERE pk=? `
-        db.query(sql, [pk], (err, result) => {
-            if (err) {
-                console.log(err)
-                return response(req, res, -200, "서버 에러 발생", [])
-            } else {
-                return response(req, res, 100, "success", [])
+        let sql = `DELETE FROM ${table}_table WHERE pk=? `;
+        let page_pk = req.body?.page_pk ?? 0;
+        console.log(table)
+        console.log(pk)
+        if (table == 'user_card' && pk == 0) {
+            if (!decode) {
+                return response(req, res, -150, "권한이 없습니다.", [])
             }
-        })
+            let result = await activeQuery(`UPDATE user_table SET card_number='', card_name='', card_expire='', card_cvc='', card_password='', birth='', bill_key='' WHERE pk=${page_pk}`);
+
+        } else {
+            let result = await activeQuery(sql, [pk]);
+        }
+        return response(req, res, 100, "success", [])
     }
     catch (err) {
         console.log(err)
@@ -2429,7 +2435,7 @@ const updateStatus = async (req, res) => {
             let user = await dbQueryList(`SELECT * FROM ${table}_table WHERE pk=${pk}`);
             user = user?.result[0];
             let content = `달카페이 회원부동산으로 승인완료되었습니다.`
-            if(user?.user_level == 10){
+            if (user?.user_level == 10) {
                 let result = await sendAligoSms({ receivers: [user?.phone, formatPhoneNumber(user?.phone)], message: content });
                 if (result.result_code == '1') {
                     await db.commit();
