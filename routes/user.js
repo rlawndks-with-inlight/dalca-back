@@ -492,16 +492,26 @@ const onPayResult = async (req, res) => {
             await db.commit();
             res.render(`
             <script>
-            window.location.href='https://dalcapay.com/home'
+            window.location.href='https://dalcapay.com/payresult/1'
             </script>
             `)
         } else {
             await db.rollback();
+            res.render(`
+            <script>
+            window.location.href='https://dalcapay.com/payresult/0?result_msg="${result_msg}"'
+            </script>
+            `)
             return response(req, res, -100, result_msg, [])
         }
     } catch (err) {
         await db.rollback();
         console.log(err)
+        res.render(`
+            <script>
+            window.location.href='https://dalcapay.com/payresult/0?result_msg="서버 에러 발생"'
+            </script>
+        `)
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
