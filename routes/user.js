@@ -418,6 +418,7 @@ const onPayByDirect = async (req, res) => {
 }
 const onPayResult = async (req, res) => {
     try {
+        console.log(req.body)
         let {
             tid,
             resultCode,
