@@ -418,7 +418,6 @@ const onPayByDirect = async (req, res) => {
 }
 const onPayResult = async (req, res) => {
     try {
-        console.log(req.body)
         let {
             tid,
             mid,
@@ -435,7 +434,7 @@ const onPayResult = async (req, res) => {
             buyerTel,
             buyerName,
             temp,
-        } = req.body;
+        } = req.query;
         temp = JSON.parse(temp);
         if (result_cd == '0000') {
             let pay_pk = temp?.temp;

@@ -106,7 +106,7 @@ router.post('/contract/:edit_category', editContract);
 router.post('/pay/:edit_category', editPay);
 router.post('/paydirect', onPayByDirect);
 router.post('/paycanceldirect', onPayCancelByDirect);
-router.post('/payresult', onPayResult);
+router.get('/payresult', onPayResult);
 router.post('/addfamilycard', addFamilyCard);
 router.post('/updatefamilycard', updateFamilyCard);
 router.post('/wantpaycancel', onWantPayCancel);
