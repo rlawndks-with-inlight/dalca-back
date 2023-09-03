@@ -421,34 +421,35 @@ const onPayResult = async (req, res) => {
         console.log(req.body)
         let {
             tid,
-            resultCode,
-            resultMsg,
+            mid,
+            result_cd,
+            result_msg,
             EventCode,
             TotPrice,
-            MOID,
+            ord_num,
             payMethod,
-            applNum,
-            applDate,
+            appr_num,
+            trx_dttm,
             applTime,
             buyerEmail,
             buyerTel,
             buyerName,
             temp,
-            mid
         } = req.body;
-        if (resultCode == '0000') {
-            let pay_pk = temp;
-            let trade_date = `${applDate.substring(0, 4)}-${applDate.substring(4, 6)}-${applDate.substring(6, 8)} ${applTime.substring(0, 2)}:${applTime.substring(2, 4)}:${applTime.substring(4, 6)}`;
-            let trade_day = trade_date.substring(0, 10);
+        temp = JSON.parse(temp);
+        if (result_cd == '0000') {
+            let pay_pk = temp?.temp;
+            let trade_date = trx_dttm;
+            let trade_day = trx_dttm.substring(0, 10);
             await db.beginTransaction();
             let setting = await dbQueryList(`SELECT * FROM setting_table LIMIT 1`);
             setting = setting?.result[0];
             let update_pay = await activeQuery("UPDATE pay_table SET status=1, trade_date=?, trade_day=?, order_num=?, transaction_num=?, approval_num=?, is_auto=0, card_percent=?, mid=? WHERE pk=?", [
                 trade_date,
                 trade_day,
-                MOID,
+                ord_num,
                 tid,
-                applNum,
+                appr_num,
                 setting?.card_percent,
                 mid,
                 pay_pk,
@@ -490,10 +491,14 @@ const onPayResult = async (req, res) => {
                 let result2 = await initialPay(contract);
             }
             await db.commit();
-            return response(req, res, 100, "success", []);
+            res.render(`
+            <script>
+            window.location.href='https://dalcapay.com/home'
+            </script>
+            `)
         } else {
             await db.rollback();
-            return response(req, res, -100, resultMsg, [])
+            return response(req, res, -100, result_msg, [])
         }
     } catch (err) {
         await db.rollback();
@@ -730,7 +735,7 @@ const onChangePayStatus = async (req, res) => {
         pay = pay?.result[0];
         let contract = await dbQueryList(`SELECT contract_table.*, user_table.commission_percent FROM contract_table LEFT JOIN user_table ON contract_table.${getEnLevelByNum(10)}_pk=user_table.pk WHERE contract_table.pk=${pay?.contract_pk}`);
         contract = contract?.result[0];
-        if(pay?.status == 1){
+        if (pay?.status == 1) {
             if (pay?.pay_category == 2) {
                 let insert_deposit = await activeQuery(`INSERT pay_table (${getEnLevelByNum(0)}_pk, ${getEnLevelByNum(5)}_pk, ${getEnLevelByNum(10)}_pk, price, pay_category, status, contract_pk, day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
                     contract[`${getEnLevelByNum(0)}_pk`],
