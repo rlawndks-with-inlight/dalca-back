@@ -47,19 +47,14 @@ const kakaoOpt = {
     redirectUri: 'http://172.30.1.19:8001/api/kakao/callback',
 };
 const PAY_ADDRESS = {
-    TEST: `https://tpayapi.paywelcome.co.kr`,
-    SERVICE: `https://payapi.paywelcome.co.kr`,
+    TEST: `https://svcapi.mtouch.com`,
+    SERVICE: `https://svcapi.mtouch.com`,
 }
 const PAY_INFO = {//빌키인증 정보
-    SIGN_KEY: `b3VGY2R5ZzI5M2xCZzhrT0paQ1oxQT09`,//빌키 sign 키
-    CERTIFICATION_SIGN_KEY: 'QjZXWDZDRmxYUXJPYnMvelEvSjJ5QT09',//인증 sign키
-    MID: `wpaybill01`,
-    API_IV: `1111111111111111`,
-    API_KEY: `11111111111111111111111111111111`
-}
-const IDENTIFICATION_INFO = {//본인확인 api 정보
-    MID: `INIiasTest`,
-    API_KEY: 'TGdxb2l3enJDWFRTbTgvREU3MGYwUT09',
+    MID: `ac5688702806`,
+    API_KEY: `pk_2da7-9b8fc8-1f3-23601`,
+    BILL_NO: `042105`,
+    TID: 'TMN042105',
 }
 const MY_CARD_IDENTIFICATION_INFO = {//카드 본인확인 정보
     MID: `INICAStest`,
@@ -133,6 +128,7 @@ const getHomeContent = async (req, res) => {
             { table: 'contract', sql: `SELECT * FROM v_contract ${user_where_sql} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'point', sql: `${(await sqlJoinFormat('point', '', '', '', 'WHERE 1=1', decode))?.sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
             { table: 'pay', sql: `SELECT * FROM v_pay ${user_where_sql} ${decode?.user_level == 5 ? landlord_sql : ''} ORDER BY pk DESC LIMIT 5`, type: 'list' },
+            { table: 'commission', sql: `${(await sqlJoinFormat('commission', '', '', '', 'WHERE 1=1', decode))?.sql} WHERE user_pk=${decode?.pk} ORDER BY pk DESC LIMIT 5`, type: 'list' },
         ];
         for (var i = 0; i < sql_list.length; i++) {
             result_list.push(queryPromise(sql_list[i]?.table, sql_list[i]?.sql));
@@ -152,6 +148,7 @@ const getHomeContent = async (req, res) => {
             result_obj[(await result[i])?.table] = (await result[i])?.data;
         }
         result_obj['point'] = listFormatBySchema('point', result_obj['point'])
+        result_obj['commission'] = listFormatBySchema('commission', result_obj['commission'])
         return response(req, res, 100, "success", result_obj)
 
     } catch (err) {
@@ -403,7 +400,6 @@ const onPayByDirect = async (req, res) => {
                 setting?.card_percent,
                 item_pk
             ])
-
             await db.commit();
             return response(req, res, 100, "success", []);
         } else {
@@ -673,50 +669,55 @@ const onPay = async (user, pay_item, setting) => {
 
 //빌키생성, 빌키승인(결제), 결제취소, 빌키삭제
 const createBillKey = async (decode, body) => {
-    let mid = PAY_INFO.MID;
-    let mkey = await Buffer.from(crypto.createHash('sha256').update(PAY_INFO.SIGN_KEY).digest('hex')).toString();
-    let return_moment = returnMoment();
-    return_moment = return_moment.replaceAll('-', '');
-    return_moment = return_moment.replaceAll(':', '');
-    return_moment = return_moment.replaceAll(' ', '');
-    let signature = {
-        mid: mid,
-        mkey: mkey,
-        cardNumber: body?.card_number.replaceAll(' ', ''),
-        timestamp: return_moment,
-    }
-
-    signature = new URLSearchParams(signature).toString(); //getQueryByObject(signature);
-    signature = await Buffer.from(crypto.createHash('sha256').update(signature).digest('hex')).toString();
-    let obj = {
-        mid: mid,
-        buyerName: body?.card_name,
-        cardNumber: getASE256Encrypt(body?.card_number.replaceAll(' ', '')),
-        cardExpireYY: body?.card_expire.split('/')[1],
-        cardExpireMM: body?.card_expire.split('/')[0],
-        registNo: getASE256Encrypt(body?.birth),
-        passwd: getASE256Encrypt(body?.card_password),
-        timestamp: return_moment,
-        signature: signature,
-    }
-    let query = new URLSearchParams(obj).toString(); //getQueryByObject(obj);
-    let headers = {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    }
-    const { data: response } = await axios.post(`${PAY_ADDRESS.TEST}/billing/billkey/card`, query, headers);
-    if (response?.ResultCode == '00') {
-        return {
-            result: 100,
-            data: response?.Billkey
-        }
-    } else {
-        return {
-            result: -100,
-            data: {
-                ResultMsg: response?.ResultMsg
+    try{
+        let {
+            card_number,
+            card_name,
+            card_expire,
+            birth,
+            card_password,
+        } = body;
+        
+        let obj = {
+            billing:{
+                mchtBillNo:PAY_INFO.BILL_NO,
+                userId:PAY_INFO.MID,
+                buyerName: card_name,
+                encData:{
+                    cardNo: card_number.replaceAll(' ', ''),
+                    expYear:card_expire.split('/')[1],
+                    expMonth:card_expire.split('/')[0],
+                    idNo:birth,
+                    cardPw:card_password,
+                }
             }
         }
+        let query = obj; //getQueryByObject(obj);
+        let headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `${PAY_INFO.API_KEY}`
+        }
+        const { data: response } = await axios.post(`${PAY_ADDRESS.TEST}/api/billing/regist`, query, headers);
+        console.log(response)
+        if (response?.ResultCode == '00') {
+            return {
+                result: 100,
+                data: response?.Billkey
+            }
+        } else {
+            return {
+                result: -100,
+                data: {
+                    ResultMsg: response?.ResultMsg
+                }
+            }
+        }
+    }catch(err){
+        console.log('############');
+        console.log(err);
+        console.log('############');
     }
+    
 }
 const onChangePayStatus = async (req, res) => {
     try {
