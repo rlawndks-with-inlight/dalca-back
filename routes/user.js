@@ -429,11 +429,10 @@ const onPayResult = async (req, res) => {
             buyerEmail,
             buyerTel,
             buyerName,
-            temp='{}',
+            temp,
         } = req.query;
-        temp = JSON.parse(temp);
         if (result_cd == '0000') {
-            let pay_pk = temp?.temp;
+            let pay_pk = temp;
             let trade_date = trx_dttm;
             let trade_day = trx_dttm.substring(0, 10);
             await db.beginTransaction();
