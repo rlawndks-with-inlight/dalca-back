@@ -1200,8 +1200,11 @@ const addItemByUser = async (req, res) => {
 
 const updateItem = async (req, res) => {
     try {
-        const decode = checkLevel(req.cookies.token, 40);
-        if (!decode) {
+        const decode = checkLevel(req.cookies.token, 0);
+        let user_use_list = [
+            'request'
+        ]
+        if (decode?.user_level < 40 && !user_use_list.includes(req.body?.table)) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
         let body = { ...req.body };
@@ -1246,7 +1249,7 @@ const updateItem = async (req, res) => {
             values_str += ", ?"
         }
         let table = req.body.table;
-        if (use_manager_pk.includes(table)) {
+        if (use_manager_pk.includes(table) && decode?.user_level >= 40) {
             values.push(decode?.pk);
             if (i != 0) {
                 values_str += ",";
@@ -1621,7 +1624,7 @@ const getOptionObjBySchema = async (schema, whereStr, decode, body) => {
         let pay_sum = await dbQueryList(api_str);
         pay_sum = pay_sum?.result[0];
         obj['pay_sum'] = {
-            title: '전체금액',
+            title: '총금액',
             content: `${commarNumber(pay_sum?.sum_price)}원`
         };
     }
@@ -2187,8 +2190,8 @@ const getMyItem = async (req, res) => {
 const getAddressByText = async (req, res) => {
     try {
         let { text } = req.body;
-        let client_id = 'p8k25t57ye';
-        let client_secret = 'Nuqyt0Sj901zfBXVdFcXFdK6Fhzbsu2JFOVjXkW3';
+        let client_id = 'w2ogk0newp';
+        let client_secret = 'q6z54hwKWSYEPyrjKiLy8nqG720DWLcN8Sa5ra56';
         let api_url = 'https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode'; // json
         if (!text) {
             return response(req, res, -100, "주소명을 입력 후 검색 버튼을 눌러주세요.", []);
@@ -2358,6 +2361,29 @@ const deleteItem = async (req, res) => {
         return response(req, res, -200, "서버 에러 발생", [])
     }
 }
+const deleteItemByUser = async (req, res) => {
+    try {
+        const decode = checkLevel(req.cookies.token, 0)
+        let pk = req.body.pk ?? 0;
+        let table = req.body.table ?? "";
+        let sql = `DELETE FROM ${table}_table WHERE pk=? `;
+        let page_pk = req.body?.page_pk ?? 0;
+        let user_use_list = ['user_card', 'request'];
+        if (!user_use_list.includes(table)) {
+            return response(req, res, -150, "권한이 없습니다.", [])
+        }
+        if (table == 'user_card' && pk == 0) {
+            let result = await activeQuery(`UPDATE user_table SET card_number='', card_name='', card_expire='', card_cvc='', card_password='', birth='', bill_key='' WHERE pk=${page_pk}`);
+        } else {
+            let result = await activeQuery(sql, [pk]);
+        }
+        return response(req, res, 100, "success", [])
+    }
+    catch (err) {
+        console.log(err)
+        return response(req, res, -200, "서버 에러 발생", [])
+    }
+}
 const addSetting = (req, res) => {
     try {
         const decode = checkLevel(req.cookies.token, 25)
@@ -2429,8 +2455,6 @@ const updateStatus = async (req, res) => {
         let sql = `UPDATE ${table}_table SET ${column}=? WHERE pk=? `
         await db.beginTransaction();
         let result = await activeQuery(sql, [num, pk]);
-        console.log('################')
-        console.log(num)
         if (table == 'user' && num == 1) { // 공인중개서 승인시
             let user = await dbQueryList(`SELECT * FROM ${table}_table WHERE pk=${pk}`);
             user = user?.result[0];
@@ -2945,5 +2969,5 @@ module.exports = {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
+    deleteItem, deleteItemByUser, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
 };

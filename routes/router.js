@@ -6,7 +6,7 @@ const {
     getUsers, getItems, getSetting, getVideo, onSearchAllItem, findIdByPhone, findAuthByIdAndPhone, getComments, getCommentsManager, getCountNotReadNoti, getNoticeAndAlarmLastPk, getAllPosts, getUserStatistics, addImageItems,//select
     onSignUp, addItem, addItemByUser, addNoteImage, addSetting, addComment, addAlarm, addPopup, insertUserMoneyByExcel,//insert 
     updateUser, updateItem, updateSetting, updateStatus, onTheTopItem, changeItemSequence, changePassword, updateComment, updateAlarm, updatePopup,//update
-    deleteItem, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
+    deleteItem, deleteItemByUser, onResign, getMyItems, getMyItem, onSubscribe, updateSubscribe, getHeaderContent, onKeyrecieve, editContract, editPay, getAddressByText, getBellContent
 } = require('./common');
 const {
     addContract, getHomeContent, updateContract, requestContractAppr, confirmContractAppr, onResetContractUser,
@@ -57,6 +57,7 @@ router.post('/additembyuser', upload.fields([{ name: 'content' }, { name: 'conte
 router.post('/updateitem', upload.fields([{ name: 'content' }, { name: 'content2' }]), updateItem);
 router.post('/addimage', upload.single('note'), addNoteImage);
 router.post('/deleteitem', deleteItem);
+router.post('/deleteitembyuser', deleteItemByUser);
 router.post('/resign', onResign);
 router.post('/updateuser', updateUser);
 router.get('/onsearchallitem', onSearchAllItem);

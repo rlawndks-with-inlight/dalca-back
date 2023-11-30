@@ -19,9 +19,9 @@ const dbQueryRows = (sql) => {
         })
     })
 }
-const dbQueryList = (sql,list) => {
+const dbQueryList = (sql, list) => {
     return new Promise((resolve, reject) => {
-        db.query(sql,[list], (err, result, fields) => {
+        db.query(sql, [list], (err, result, fields) => {
             if (err) {
                 console.log(err)
                 reject({
@@ -70,7 +70,7 @@ const getTableAI = (table) => {
             else {
                 resolve({
                     code: 200,
-                    result: result[0]?.Auto_increment??0
+                    result: result[0]?.Auto_increment ?? 0
                 })
             }
         })

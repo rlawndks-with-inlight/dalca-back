@@ -668,7 +668,7 @@ const onPay = async (user, pay_item, setting) => {
 
 //빌키생성, 빌키승인(결제), 결제취소, 빌키삭제
 const createBillKey = async (decode, body) => {
-    try{
+    try {
         let {
             card_number,
             card_name,
@@ -676,18 +676,18 @@ const createBillKey = async (decode, body) => {
             birth,
             card_password,
         } = body;
-        
+
         let obj = {
-            billing:{
-                mchtBillNo:PAY_INFO.BILL_NO,
-                userId:PAY_INFO.MID,
+            billing: {
+                mchtBillNo: PAY_INFO.BILL_NO,
+                userId: PAY_INFO.MID,
                 buyerName: card_name,
-                encData:{
+                encData: {
                     cardNo: card_number.replaceAll(' ', ''),
-                    expYear:card_expire.split('/')[1],
-                    expMonth:card_expire.split('/')[0],
-                    idNo:birth,
-                    cardPw:card_password,
+                    expYear: card_expire.split('/')[1],
+                    expMonth: card_expire.split('/')[0],
+                    idNo: birth,
+                    cardPw: card_password,
                 }
             }
         }
@@ -711,12 +711,10 @@ const createBillKey = async (decode, body) => {
                 }
             }
         }
-    }catch(err){
-        console.log('############');
+    } catch (err) {
         console.log(err);
-        console.log('############');
     }
-    
+
 }
 const onChangePayStatus = async (req, res) => {
     try {
@@ -887,7 +885,7 @@ const registerAutoCard = async (req, res) => {
             card = card?.result[0];
         }
         if (!card?.bill_key) {
-            return response(req, res, -100, "카드를 먼저 등록해 주세요.", []);
+            return response(req, res, -100, "유효하지 않은 카드입니다.", []);
         }
         await db.beginTransaction();
         let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
@@ -914,8 +912,13 @@ const cancelAutoCard = async (req, res) => {
         if (user_pk && decode?.user_level >= 40) {
             user_pk_ = user_pk;
         }
+        let result = await getMyAutoCardReturn(decode);
         await db.beginTransaction();
-        let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
+        if (result?.pk == 0) {
+
+        } else {
+            let delete_auto_card = await activeQuery(`DELETE FROM auto_card_table WHERE user_pk=?`, [user_pk_]);
+        }
 
         await db.commit();
         return response(req, res, 100, "success", []);
