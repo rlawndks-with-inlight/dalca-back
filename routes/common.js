@@ -367,7 +367,11 @@ const getMyInfo = async (req, res) => {
         if (!decode) {
             return response(req, res, -150, "권한이 없습니다.", [])
         }
-        let result = await dbQueryList(`SELECT * FROM user_table WHERE pk=${decode?.pk}`);
+        let columns = [
+            `user_table.*`,
+            `(SELECT SUM(price) FROM point_table WHERE user_pk=user_table.pk) AS total_point`
+        ]
+        let result = await dbQueryList(`SELECT ${columns.join()} FROM user_table WHERE pk=${decode?.pk}`);
         result = result?.result[0];
         return response(req, res, 100, "success", result);
     } catch (e) {
@@ -387,13 +391,37 @@ const editMyInfo = async (req, res) => {
         }
         let user = await dbQueryList('SELECT * FROM user_table WHERE pk=?', [decode?.pk]);
         user = user?.result[0];
-        pw = await makeHash(pw);
+        pw = await makeHash(pw ?? "");
         pw = pw?.data;
-        if (user?.pw != pw) {
-            return response(req, res, -100, "비밀번호가 일치하지 않습니다.", [])
-        }
-        if (typeNum == 0) {
+        if (typeNum == 1 || typeNum == 0)
+            if (user?.pw != pw) {
+                return response(req, res, -100, "비밀번호가 일치하지 않습니다.", [])
+            }
+        if (typeNum == 2) {
             let result = activeQuery("UPDATE user_table SET zip_code=?, address=?, address_detail=? WHERE pk=?", [zip_code, address, address_detail, decode?.pk]);
+            user = await dbQueryList('SELECT * FROM user_table WHERE pk=?', [decode?.pk]);
+            user = user?.result;
+            const token = jwt.sign({
+                pk: user[0].pk ?? 0,
+                nickname: user[0].nickname ?? "",
+                name: user[0].name ?? "",
+                id: user[0].id ?? "",
+                user_level: user[0].user_level ?? -1,
+                phone: user[0].phone ?? "",
+                profile_img: user[0].profile_img ?? "",
+                type: user[0].type ?? -1
+            },
+                jwtSecret,
+                {
+                    expiresIn: '60000m',
+                    issuer: 'fori',
+                });
+            res.cookie("token", token, {
+                httpOnly: true,
+                maxAge: 60 * 60 * 1000 * 10 * 10 * 10,
+                //sameSite: 'none', 
+                //secure: true 
+            });
             return response(req, res, 100, "success", []);
         } else {
             if (newPw) {
@@ -441,11 +469,34 @@ const editMyInfo = async (req, res) => {
                             }
                             return response(req, res, -50, message, []);
                         } else {
-                            await db.query(updateSql, zColumn, (err, result2) => {
+                            await db.query(updateSql, zColumn, async (err, result2) => {
                                 if (err) {
                                     console.log(err)
                                     return response(req, res, -100, "서버 에러 발생", []);
                                 } else {
+                                    user = await dbQueryList('SELECT * FROM user_table WHERE pk=?', [decode?.pk]);
+                                    user = user?.result;
+                                    const token = jwt.sign({
+                                        pk: user[0].pk ?? 0,
+                                        nickname: user[0].nickname ?? "",
+                                        name: user[0].name ?? "",
+                                        id: user[0].id ?? "",
+                                        user_level: user[0].user_level ?? -1,
+                                        phone: user[0].phone ?? "",
+                                        profile_img: user[0].profile_img ?? "",
+                                        type: user[0].type ?? -1
+                                    },
+                                        jwtSecret,
+                                        {
+                                            expiresIn: '60000m',
+                                            issuer: 'fori',
+                                        });
+                                    res.cookie("token", token, {
+                                        httpOnly: true,
+                                        maxAge: 60 * 60 * 1000 * 10 * 10 * 10,
+                                        //sameSite: 'none', 
+                                        //secure: true 
+                                    });
                                     return response(req, res, 100, "success", []);
                                 }
                             })
