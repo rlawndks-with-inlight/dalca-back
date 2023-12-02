@@ -117,7 +117,7 @@ const scheduleSystem = () => {
                                 contracts = contracts?.result;
                                 let pays = await dbQueryList(`SELECT contract_pk, MAX(day) as max_day FROM v_pay WHERE pay_category=0 group by contract_pk`);
                                 pays = pays?.result;
-                                let users = await dbQueryList(`SELECT * FROM user_table`);
+                                let users = await dbQueryList(`SELECT * FROM user_table WHERE status=1`);
                                 users = users?.result;
                                 users_obj = {};
                                 for (var i = 0; i < users.length; i++) {

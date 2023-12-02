@@ -246,10 +246,12 @@ const onLoginById = async (req, res) => {
 
                         if (hash == result1[0].pw) {
                             try {
-                                if (result1[0].status != 1) {
+                                if (result1[0].status == 0) {
                                     return response(req, res, -150, "승인 대기 중인 계정입니다.", [])
                                 }
-
+                                if (result1[0].status == 2) {
+                                    return response(req, res, -150, "탈퇴된 계정입니다.", [])
+                                }
                                 const token = jwt.sign({
                                     pk: result1[0].pk ?? 0,
                                     nickname: result1[0].nickname ?? "",
@@ -525,7 +527,7 @@ const onResign = async (req, res) => {
             return response(req, res, -100, "비밀번호가 일치하지 않습니다.", []);
         }
         await db.beginTransaction();
-        let result = await activeQuery("DELETE FROM user_table WHERE pk=?", [decode?.pk]);
+        let result = await activeQuery("UPDATE user_table SET status=2 WHERE pk=?", [decode?.pk]);
         await res.clearCookie('token');
 
         await db.commit();
@@ -626,7 +628,7 @@ const findAuthByIdAndPhone = (req, res) => {
     try {
         const id = req.body.id;
         const phone = req.body.phone;
-        db.query("SELECT * FROM user_table WHERE id=? AND phone=?", [id, phone], (err, result) => {
+        db.query("SELECT * FROM user_table WHERE id=? AND phone=? AND status=1", [id, phone], (err, result) => {
             if (err) {
                 console.log(err)
                 return response(req, res, -200, "서버 에러 발생", [])
@@ -2139,7 +2141,7 @@ const getItemsReturnBySchema = async (sql_, pageSql_, schema_, body_, decode) =>
                 where_str_real += ` AND status=${body.status} `
             }
             let sql_list = [
-                { table: 'user', sql: `SELECT * FROM user_table  ${where_str_user} AND user_level=10 ORDER BY pk DESC`, type: 'list' },
+                { table: 'user', sql: `SELECT * FROM user_table  ${where_str_user} AND user_level=10 AND status=1 ORDER BY pk DESC`, type: 'list' },
                 { table: 'real_estate', sql: `SELECT * FROM real_estate_table ${where_str_real} ORDER BY pk DESC`, type: 'list' },
             ];
             for (var i = 0; i < sql_list.length; i++) {

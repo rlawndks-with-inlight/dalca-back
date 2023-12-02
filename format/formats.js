@@ -212,7 +212,7 @@ const getCustomInfoReturn = async (decode, level, page) => {
     }
     let user_list = [];
     if (user_pk_list.length > 0) {
-        let api_str = `SELECT * FROM user_table WHERE pk IN (${user_pk_list.join()}) `;
+        let api_str = `SELECT * FROM user_table WHERE pk IN (${user_pk_list.join()}) AND status=1 `;
         if(page){
             api_str += `LIMIT ${(page - 1) * 10}, 10`
         }   
